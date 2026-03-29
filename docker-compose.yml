@@ -1,0 +1,178 @@
+version: '3.9'
+
+networks:
+  locus-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  qdrant-data:
+  neo4j-data:
+  redis-data:
+  ollama-data:
+  syncthing-data:
+  obsidian-vault:
+
+x-fastapi-env: &fastapi-env
+  DATABASE_URL: postgresql+asyncpg://locus:${POSTGRES_PASSWORD}@postgres:5432/locus
+  REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+  QDRANT_URL: http://qdrant:6333
+  NEO4J_URL: bolt://neo4j:7687
+  OLLAMA_URL: http://ollama:11434
+  GEMINI_API_KEY: ${GEMINI_API_KEY}
+  GROQ_API_KEY: ${GROQ_API_KEY}
+  SECRET_KEY: ${SECRET_KEY}
+
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: locus-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: locus
+      POSTGRES_USER: locus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - locus-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: locus-redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks:
+      - locus-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: locus-qdrant
+    restart: always
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - locus-net
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: locus-neo4j
+    restart: always
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_max__size: 2G
+      NEO4J_dbms_memory_pagecache_size: 1G
+    volumes:
+      - neo4j-data:/data
+    networks:
+      - locus-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: locus-ollama
+    restart: always
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - locus-net
+    deploy:
+      resources:
+        limits:
+          memory: 12G
+
+  fastapi:
+    build: ./backend
+    container_name: locus-api
+    restart: always
+    environment:
+      <<: *fastapi-env
+    volumes:
+      - obsidian-vault:/vault
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - locus-net
+    ports:
+      - "3000:8000"
+
+  celery-e1:
+    build: ./backend
+    container_name: locus-celery-e1
+    restart: always
+    command: celery -A app.workers.celery_app worker -Q engine1 --concurrency=2 -n engine1@%h
+    environment:
+      <<: *fastapi-env
+    volumes:
+      - obsidian-vault:/vault
+    depends_on:
+      - fastapi
+    networks:
+      - locus-net
+
+  celery-e2:
+    build: ./backend
+    container_name: locus-celery-e2
+    restart: always
+    command: celery -A app.workers.celery_app worker -Q engine2 --concurrency=1 -n engine2@%h
+    environment:
+      <<: *fastapi-env
+    depends_on:
+      - fastapi
+    networks:
+      - locus-net
+
+  celery-e3:
+    build: ./backend
+    container_name: locus-celery-e3
+    restart: always
+    command: celery -A app.workers.celery_app worker -Q engine3 --concurrency=2 -n engine3@%h
+    environment:
+      <<: *fastapi-env
+    depends_on:
+      - fastapi
+    networks:
+      - locus-net
+
+  celery-beat:
+    build: ./backend
+    container_name: locus-beat
+    restart: always
+    command: celery -A app.workers.celery_app beat 
+    environment:
+      <<: *fastapi-env
+    depends_on:
+      - fastapi
+    networks:
+      - locus-net
+
+  syncthing:
+    image: syncthing/syncthing:latest
+    container_name: locus-syncthing
+    restart: always
+    volumes:
+      - obsidian-vault:/vault
+      - syncthing-data:/var/syncthing
+    networks:
+      - locus-net
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      - "21027:21027/udp"
