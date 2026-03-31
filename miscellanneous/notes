@@ -1,8 +1,0 @@
-a self maintainance system-- Meaning the engine should itself on regular intervals run npx --latest to update itself, so that no libraries go decrepitated. 
-If there is a critical issue in the code after update, then it should list @fix code@ as priority 1 in accordance to my current timetable and how urgent things are. 
-
-It should also provide me a detailed diagnostic report as to what went wrong where and how it affects the functionalities of which engine/system with what severity and what could go wrong if not fixed
-
-Link Calendaly with Locus. 
-
-Create a seprate section for integrations.

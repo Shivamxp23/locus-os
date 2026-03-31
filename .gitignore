@@ -82,7 +82,7 @@ coverage/
 
 # archived planning docs
 .archived planning docs/
-
+.miscellanneous/
 *.key
 *.pem
 *.pub
