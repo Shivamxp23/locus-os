@@ -1,9 +1,24 @@
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import asyncpg
+from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.tasks import router as tasks_router
+from app.api.v1.endpoints.goals import router as goals_router
+from app.api.v1.endpoints.system import router as system_router
+from app.api.v1.endpoints.ai_gateway import router as ai_router
+from app.api.v1.endpoints.telegram import router as telegram_router
+from app.services.qdrant_service import ensure_collections
 
-app = FastAPI(title="Locus API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        ensure_collections()
+    except Exception:
+        pass
+    yield
+
+app = FastAPI(title="Locus API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,23 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/status")
-async def status():
-    db_status = "disconnected"
-    try:
-        conn = await asyncpg.connect(os.getenv("DATABASE_URL", "").replace("+asyncpg", ""))
-        await conn.fetchval("SELECT 1")
-        await conn.close()
-        db_status = "connected"
-    except Exception:
-        pass
-    return {
-        "status": "ok",
-        "service": "locus-api",
-        "version": "0.1.0",
-        "postgres": db_status
-    }
+app.include_router(system_router)
+app.include_router(auth_router)
+app.include_router(tasks_router)
+app.include_router(goals_router)
+app.include_router(ai_router)
+app.include_router(telegram_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Locus API is running."}
+    return {"message": "Locus API is running.", "docs": "/docs"}
