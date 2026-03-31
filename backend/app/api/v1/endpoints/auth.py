@@ -101,5 +101,61 @@ async def me(current_user: User = Depends(get_current_user)):
         "timezone": current_user.timezone,
         "genesis_completed": current_user.genesis_completed,
         "telegram_chat_id": current_user.telegram_chat_id,
+        "google_connected": bool(current_user.google_refresh_token),
         "created_at": current_user.created_at
     }
+
+
+@router.get("/google")
+async def google_oauth_start(current_user: User = Depends(get_current_user)):
+    """Redirect user to Google OAuth consent page."""
+    from app.services.google_calendar import get_auth_url
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google OAuth not configured")
+    url = get_auth_url(state=current_user.id)
+    return {"auth_url": url}
+
+
+@router.get("/google/callback")
+async def google_oauth_callback(
+    code: str,
+    state: str = "",
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Handle Google OAuth redirect. Exchanges code for tokens and stores them on the user.
+    Called by Google after the user grants consent.
+    """
+    from app.services.google_calendar import exchange_code_for_tokens
+    from datetime import datetime, timedelta
+
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing OAuth code")
+
+    try:
+        tokens = await exchange_code_for_tokens(code)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
+
+    access_token = tokens.get("access_token")
+    refresh_token = tokens.get("refresh_token")
+    expires_in = tokens.get("expires_in", 3600)
+
+    # Use state as user_id (set during /auth/google)
+    user_id = state
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing state/user_id")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.google_access_token = access_token
+    if refresh_token:
+        user.google_refresh_token = refresh_token
+    user.google_token_expiry = datetime.utcnow() + timedelta(seconds=expires_in)
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return {"status": "connected", "message": "Google Calendar connected successfully"}

@@ -209,6 +209,5 @@ CREATE TABLE IF NOT EXISTS personality_snapshots (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     generated_at TIMESTAMPTZ DEFAULT NOW(),
     snapshot_data JSONB NOT NULL,
-    version INTEGER DEFAULT 1,
-    
+    version INTEGER DEFAULT 1
 );

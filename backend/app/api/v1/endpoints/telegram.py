@@ -66,7 +66,16 @@ async def telegram_webhook(request: Request):
             text = transcription
             await _send_message(chat_id, f"Transcribed: _{transcription}_", parse_mode="Markdown")
 
-        if text and not text.startswith("/"):
+        # Handle commands first
+        if text == "/start":
+            await _send_message(
+                chat_id,
+                f"Welcome to Locus! \U0001f9e0\n\n"
+                f"Your account is linked. Send me any text or voice note to log it.\n\n"
+                f"Your Chat ID: `{chat_id}`",
+                parse_mode="Markdown"
+            )
+        elif text and not text.startswith("/"):
             # Queue to Engine 1
             try:
                 from app.workers.celery_app import app as celery_app
@@ -82,10 +91,7 @@ async def telegram_webhook(request: Request):
             except Exception:
                 pass
 
-            await _send_message(chat_id, "✓ Logged")
-
-        elif text == "/start":
-            await _send_message(chat_id, f"Welcome to Locus! Your account is linked. Send me any text or voice note to log it.")
+            await _send_message(chat_id, "\u2713 Logged")
 
     except Exception as e:
         pass

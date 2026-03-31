@@ -72,7 +72,26 @@ async def _process(event_data: dict):
         await conn.close()
         print(f"[Engine1] Written to PostgreSQL: {event_id}", flush=True)
 
-        # Step 3: Write to Obsidian vault
+        # Step 3: Write to Qdrant (async, fire-and-forget via Celery)
+        try:
+            from app.workers.celery_app import app as celery_app
+            celery_app.send_task("app.workers.tasks_e1.log_to_qdrant", kwargs={
+                "event_id": event_id,
+                "user_id": user_id,
+                "content": content,
+                "payload": {
+                    "source": source,
+                    "event_type": event_type,
+                    "intent": extracted.get("intent"),
+                    "summary": extracted.get("summary"),
+                    "topic_tags": extracted.get("topics", []),
+                    "created_at": datetime.utcnow().isoformat()
+                }
+            }, queue="engine1")
+        except Exception as qdrant_err:
+            print(f"[Engine1] Qdrant queue error: {qdrant_err}", flush=True)
+
+        # Step 4: Write to Obsidian vault
         await _write_obsidian(user_id, event_data, extracted)
 
     except Exception as e:
