@@ -8,7 +8,10 @@ from app.api.v1.endpoints.goals import router as goals_router
 from app.api.v1.endpoints.system import router as system_router
 from app.api.v1.endpoints.ai_gateway import router as ai_router
 from app.api.v1.endpoints.telegram import router as telegram_router
+from app.api.v1.endpoints.sync import router as sync_router
+from app.api.v1.endpoints.integrations import router as integrations_router
 from app.services.qdrant_service import ensure_collections
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,12 +23,14 @@ async def lifespan(app: FastAPI):
     try:
         from app.services.notion_service import ensure_notion_databases
         import asyncio
+
         dbs = await ensure_notion_databases()
         if dbs:
             print(f"[Locus] Notion databases ready: {dbs}", flush=True)
     except Exception as e:
         print(f"[Locus] Notion auto-provision skipped: {e}", flush=True)
     yield
+
 
 app = FastAPI(title="Locus API", version="0.1.0", lifespan=lifespan)
 
@@ -43,6 +48,9 @@ app.include_router(tasks_router)
 app.include_router(goals_router)
 app.include_router(ai_router)
 app.include_router(telegram_router)
+app.include_router(sync_router)
+app.include_router(integrations_router)
+
 
 @app.get("/")
 async def root():

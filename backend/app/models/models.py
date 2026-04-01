@@ -1,15 +1,26 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, Boolean, Float, Integer, Text,
-    TIMESTAMP, Date, ForeignKey, ARRAY, JSON
+    Column,
+    String,
+    Boolean,
+    Float,
+    Integer,
+    Text,
+    TIMESTAMP,
+    Date,
+    ForeignKey,
+    ARRAY,
+    JSON,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+
 def gen_uuid():
     return str(uuid.uuid4())
+
 
 class User(Base):
     __tablename__ = "users"
@@ -34,10 +45,13 @@ class User(Base):
     goals = relationship("Goal", back_populates="user", cascade="all, delete")
     tasks = relationship("Task", back_populates="user", cascade="all, delete")
 
+
 class Goal(Base):
     __tablename__ = "goals"
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     title = Column(String, nullable=False)
     description = Column(Text)
     horizon = Column(String)
@@ -55,10 +69,13 @@ class Goal(Base):
     user = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal")
 
+
 class Project(Base):
     __tablename__ = "projects"
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     title = Column(String, nullable=False)
     description = Column(Text)
     goal_id = Column(UUID(as_uuid=False), ForeignKey("goals.id"))
@@ -67,10 +84,13 @@ class Project(Base):
     created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
 
+
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     title = Column(String, nullable=False)
     description = Column(Text)
     parent_task_id = Column(UUID(as_uuid=False), ForeignKey("tasks.id"))
@@ -95,10 +115,13 @@ class Task(Base):
     user = relationship("User", back_populates="tasks")
     goal = relationship("Goal", back_populates="tasks")
 
+
 class BehavioralEvent(Base):
     __tablename__ = "behavioral_events"
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     source = Column(String, nullable=False)
     event_type = Column(String, nullable=False)
     intent = Column(String)
@@ -117,10 +140,13 @@ class BehavioralEvent(Base):
     obsidian_path = Column(String)
     processed_by_e2 = Column(Boolean, default=False)
 
+
 class PersonalityInsight(Base):
     __tablename__ = "personality_insights"
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     insight_type = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     confidence = Column(Float)
@@ -129,10 +155,13 @@ class PersonalityInsight(Base):
     delivered_at = Column(TIMESTAMP(timezone=True))
     delivery_channel = Column(String)
 
+
 class AiConversation(Base):
     __tablename__ = "ai_conversations"
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     model_used = Column(String, nullable=False)
     model_source = Column(String, nullable=False)
     messages = Column(JSON, nullable=False)
@@ -141,3 +170,29 @@ class AiConversation(Base):
     created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     obsidian_path = Column(String)
     token_count = Column(Integer)
+
+
+class SyncEvent(Base):
+    __tablename__ = "sync_events"
+    id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    device_id = Column(String, nullable=False)
+    client_event_id = Column(String, nullable=False)
+    event_type = Column(String, nullable=False)
+    payload = Column(JSON, nullable=False)
+    synced_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    conflict_detected = Column(Boolean, default=False)
+    conflict_resolution = Column(Text)
+
+
+class PersonalitySnapshot(Base):
+    __tablename__ = "personality_snapshots"
+    id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    user_id = Column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    generated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    snapshot_data = Column(JSON, nullable=False)
+    version = Column(Integer, default=1)
