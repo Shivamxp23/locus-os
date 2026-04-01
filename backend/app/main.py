@@ -16,6 +16,15 @@ async def lifespan(app: FastAPI):
         ensure_collections()
     except Exception:
         pass
+    # Auto-provision Notion databases if NOTION_API_KEY is configured
+    try:
+        from app.services.notion_service import ensure_notion_databases
+        import asyncio
+        dbs = await ensure_notion_databases()
+        if dbs:
+            print(f"[Locus] Notion databases ready: {dbs}", flush=True)
+    except Exception as e:
+        print(f"[Locus] Notion auto-provision skipped: {e}", flush=True)
     yield
 
 app = FastAPI(title="Locus API", version="0.1.0", lifespan=lifespan)

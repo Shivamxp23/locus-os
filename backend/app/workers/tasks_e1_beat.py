@@ -23,97 +23,111 @@ app.conf.beat_schedule = {
 
 @app.task(queue="engine1")
 def poll_notion_for_all_users():
-    """Poll Notion for all users with a linked Notion token."""
+    """Poll Notion for changes using the global NOTION_API_KEY (internal integration)."""
     import asyncio
     asyncio.run(_poll_notion())
 
 async def _poll_notion():
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-    from sqlalchemy import select
     from app.config import settings
-    from app.models.models import User
-
-    engine = create_async_engine(settings.DATABASE_URL, echo=False)
-    SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-    async with SessionLocal() as db:
-        result = await db.execute(
-            select(User).where(User.notion_access_token != None, User.is_active == True)
-        )
-        users = result.scalars().all()
-
-    for user in users:
-        poll_notion_for_user.delay(user.id, user.notion_access_token)
-
-    await engine.dispose()
-
-@app.task(queue="engine1")
-def poll_notion_for_user(user_id: str, notion_token: str):
-    """Poll Notion for a single user and publish changes to Engine 1."""
-    import asyncio
-    asyncio.run(_poll_user_notion(user_id, notion_token))
-
-async def _poll_user_notion(user_id: str, notion_token: str):
-    from notion_client import AsyncClient
-    from app.config import settings
+    from app.services.notion_service import get_notion_client, ensure_notion_databases
     import redis.asyncio as aioredis
     from datetime import datetime, timedelta
 
-    notion = AsyncClient(auth=notion_token)
+    notion = get_notion_client()
+    if not notion:
+        return  # No API key configured — skip silently
+
     r = aioredis.from_url(settings.REDIS_URL)
 
     try:
-        # Get last poll time from Redis
-        last_poll_key = f"notion:last_poll:{user_id}"
-        last_poll = await r.get(last_poll_key)
-        after_time = last_poll.decode() if last_poll else (
-            datetime.utcnow() - timedelta(hours=1)
-        ).isoformat() + "Z"
+        # Ensure databases exist (auto-creates on first run)
+        db_ids = await ensure_notion_databases()
+        if not db_ids:
+            print("[Notion] No databases available, skipping poll", flush=True)
+            return
 
-        # Search for recently edited pages
-        results = await notion.search(
-            filter={"property": "object", "value": "page"},
-            sort={"direction": "descending", "timestamp": "last_edited_time"}
-        )
-
-        for page in results.get("results", []):
-            page_id = page["id"]
-            last_edited = page.get("last_edited_time", "")
-
-            # Check if we've seen this version
-            cache_key = f"notion:last_edit:{user_id}:{page_id}"
-            known_edit = await r.get(cache_key)
-
-            if known_edit and known_edit.decode() == last_edited:
+        # Poll each managed database for recent changes
+        for db_key, db_id in db_ids.items():
+            if not db_id:
                 continue
 
-            # Something changed — publish to Engine 1
-            title = ""
-            if page.get("properties"):
-                for prop in page["properties"].values():
+            last_poll_key = f"notion:last_poll:{db_key}"
+            last_poll = await r.get(last_poll_key)
+            after_time = last_poll.decode() if last_poll else (
+                datetime.utcnow() - timedelta(hours=1)
+            ).isoformat() + "Z"
+
+            try:
+                results = await notion.databases.query(
+                    database_id=db_id,
+                    sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+                    page_size=20,
+                )
+            except Exception as e:
+                print(f"[Notion] Query error for {db_key}: {e}", flush=True)
+                continue
+
+            for page in results.get("results", []):
+                page_id = page["id"]
+                last_edited = page.get("last_edited_time", "")
+
+                cache_key = f"notion:last_edit:{db_key}:{page_id}"
+                known_edit = await r.get(cache_key)
+
+                if known_edit and known_edit.decode() == last_edited:
+                    continue
+
+                # Check if this was created by Locus itself (avoid loops)
+                locus_id_prop = page.get("properties", {}).get("Locus ID", {})
+                rich_texts = locus_id_prop.get("rich_text", [])
+                if rich_texts:
+                    # This page was created by Locus — skip to avoid feedback loop
+                    await r.set(cache_key, last_edited)
+                    continue
+
+                # Extract title
+                title = ""
+                for prop in page.get("properties", {}).values():
                     if prop.get("type") == "title":
                         title_parts = prop.get("title", [])
-                        title = "".join([t.get("plain_text", "") for t in title_parts])
+                        title = "".join(t.get("plain_text", "") for t in title_parts)
                         break
 
-            from app.workers.celery_app import app as celery_app
-            celery_app.send_task("app.workers.tasks_e1.process_behavioral_event", kwargs={
-                "event_data": {
-                    "type": "notion_page_changed",
-                    "user_id": user_id,
-                    "source": "notion",
-                    "content": title or "Notion page updated",
-                    "notion_page_id": page_id,
-                    "created_at": datetime.utcnow().isoformat()
-                }
-            }, queue="engine1")
+                # Determine user — for now use default user
+                # In multi-user mode, pages would be tagged with user ID
+                from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+                from sqlalchemy import select
+                from app.models.models import User
 
-            await r.set(cache_key, last_edited)
+                engine = create_async_engine(settings.DATABASE_URL, echo=False)
+                S = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+                async with S() as db:
+                    result = await db.execute(select(User).where(User.is_active == True).limit(1))
+                    user = result.scalar_one_or_none()
+                await engine.dispose()
 
-        await r.set(last_poll_key, datetime.utcnow().isoformat() + "Z")
+                if not user:
+                    continue
+
+                from app.workers.celery_app import app as celery_app
+                celery_app.send_task("app.workers.tasks_e1.process_behavioral_event", kwargs={
+                    "event_data": {
+                        "type": "notion_page_changed",
+                        "user_id": user.id,
+                        "source": "notion",
+                        "content": title or "Notion page updated",
+                        "notion_page_id": page_id,
+                        "created_at": datetime.utcnow().isoformat()
+                    }
+                }, queue="engine1")
+
+                await r.set(cache_key, last_edited)
+
+            await r.set(last_poll_key, datetime.utcnow().isoformat() + "Z")
 
     finally:
         await r.aclose()
+
 
 @app.task(queue="engine1")
 def run_backup():
