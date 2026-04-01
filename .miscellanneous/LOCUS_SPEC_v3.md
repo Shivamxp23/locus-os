@@ -3417,6 +3417,7 @@ async def health_check():
 - ✅ Offline queue functional: tasks queue locally when offline, sync on reconnect
 - ✅ Service Worker caching: app shell cached, API uses network-first strategy
 - ⚠️ WebLLM download button: scaffolded but not fully implemented (Phase 3 priority)
+- BONUS: Added end-to-end data sync (Obsidian <--> Notion <--> PostgreSQL)
 
 ## Phase 3: Engine 2 — Personality Intelligence (Weeks 8–12)
 
