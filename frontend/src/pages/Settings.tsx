@@ -72,7 +72,9 @@ export default function Settings() {
                 <div className="text-sm font-medium text-text-primary">Notion</div>
                 <div className="text-xs text-text-tertiary">Bidirectional task sync (60s poll)</div>
               </div>
-              <Badge color="success">Connected</Badge>
+              <Badge color={integrations?.notion?.connected ? 'success' : 'default'}>
+                {integrations?.notion?.connected ? 'Connected' : 'Not connected'}
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <div>
@@ -93,7 +95,7 @@ export default function Settings() {
             <div>Your intelligence. Organized.</div>
             <div className="text-xs text-text-tertiary mt-2">
               Backend: api.locusapp.online<br />
-              Frontend: locusapp.pages.dev
+              Frontend: locusapp.online
             </div>
           </div>
         </Card>
@@ -101,3 +103,4 @@ export default function Settings() {
     </div>
   );
 }
+

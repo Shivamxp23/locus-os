@@ -9,7 +9,7 @@ import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 
 // Single-user mode — auto-authenticated
-const SINGLE_USER_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNzQ1ODk5My0xNTkzLTQ2YzEtYjU5Ni0xZTBhMzA0Y2Q3ZWMiLCJleHAiOjE3NzUwMjA1MTEsInR5cGUiOiJhY2Nlc3MifQ.X3VU7t8ZKeIMQ1J6zOrMlRf3pfJ887hPrp3Mz3oTBwU';
+const SINGLE_USER_TOKEN = 'eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJzdWIiOiAiMDc0NTg5OTMtMTU5My00NmMxLWI1OTYtMWUwYTMwNGNkN2VjIiwgImV4cCI6IDE4MDY1NzUwNzgsICJ0eXBlIjogImFjY2VzcyJ9.d9YPC1TeEvU4F6eqmdN4jc_1gT9tUPRbP9e-dT4xd6Q';
 const SINGLE_USER_EMAIL = 'locus@locus.dev';
 
 // Auto-set token on load

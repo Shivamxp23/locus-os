@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     SECRET_KEY: str
     DATABASE_URL: str
@@ -18,12 +19,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "https://api.locusapp.online/auth/google/callback"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 525600  # 1 year for single-user mode
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 365
     ENVIRONMENT: str = "production"
 
     class Config:
         env_file = ".env"
         extra = "ignore"
+
 
 settings = Settings()
