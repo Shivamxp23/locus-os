@@ -12,6 +12,7 @@ volumes:
   ollama-data:
   syncthing-data:
   obsidian-vault:
+  openclaw-data:
 
 x-fastapi-env: &fastapi-env
   DATABASE_URL: postgresql+asyncpg://locus:${POSTGRES_PASSWORD}@postgres:5432/locus
@@ -143,4 +144,30 @@ services:
       - "22000:22000/tcp"
       - "22000:22000/udp"
       - "21027:21027/udp"
+
+  openclaw:
+    build:
+      context: ./openclaw
+      dockerfile: Dockerfile
+    container_name: locus-openclaw
+    restart: always
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_OWNER_ID: ${TELEGRAM_OWNER_ID:-8089688853}
+      LOCUS_API_URL: http://locus-api:8000
+      LOCUS_AUDIT_URL: http://locus-api:8000/api/v1/audit/openclaw
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-locus-gateway-token-2026}
+      OPENCLAW_STATE_DIR: /data/openclaw
+      OPENCLAW_CONFIG_PATH: /data/openclaw/openclaw.json
+      NODE_ENV: production
+    volumes:
+      - openclaw-data:/data/openclaw
+      - ./openclaw-config/openclaw.json:/data/openclaw/openclaw.json:ro
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - locus-net
+    ports:
+      - "18789:18789"
 

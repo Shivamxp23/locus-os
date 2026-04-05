@@ -1,0 +1,26 @@
+{
+  "gateway": {
+    "auth": "${OPENCLAW_GATEWAY_TOKEN}",
+    "port": 18789,
+    "bind": "loopback"
+  },
+  "telegram": {
+    "token": "${TELEGRAM_BOT_TOKEN}",
+    "ownerId": "${TELEGRAM_OWNER_ID}"
+  },
+  "skills": {
+    "load": {
+      "extraDirs": ["/app/openclaw/skills"],
+      "watch": false
+    },
+    "limits": {
+      "maxSkillsInPrompt": 50,
+      "maxSkillsPromptChars": 15000
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "ollama/llama3.1:8b"
+    }
+  }
+}
