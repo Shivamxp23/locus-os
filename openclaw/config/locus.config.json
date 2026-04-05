@@ -1,35 +1,29 @@
 {
-  // ═══════════════════════════════════════════════════════════════
-  // Locus OpenClaw Configuration
-  // LOCUS MODIFICATION 2 — config locked to environment
-  // All sensitive values come from environment variables, not this file.
-  // This file is read-only reference. No runtime writes.
-  // ═══════════════════════════════════════════════════════════════
-
-  // Telegram channel — token comes from env TELEGRAM_TOKEN (aliased to TELEGRAM_BOT_TOKEN)
   "channels": {
     "telegram": {
-      "botToken": {
-        "source": "env",
-        "id": "TELEGRAM_TOKEN"
-      },
+      "enabled": true,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
       "dmPolicy": "allowlist",
-      "allowFrom": ["${TELEGRAM_OWNER_ID}"]
+      "allowFrom": ["8089688853"]
     }
   },
-
-  // LLM provider — Gemini via env key
-  "providers": {
-    "gemini": {
-      "apiKey": {
-        "source": "env",
-        "id": "GEMINI_API_KEY"
+  "gateway": {
+    "mode": "local"
+  },
+  "models": {
+    "providers": {
+      "ollama": {
+        "apiKey": "${OLLAMA_API_KEY}",
+        "baseUrl": "http://locus-ollama:11434",
+        "api": "ollama"
       }
     }
   },
-
-  // Gateway mode for Telegram polling
-  "gateway": {
-    "mode": "multi-tenant"
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "ollama/llama3.1:8b"
+      }
+    }
   }
 }
