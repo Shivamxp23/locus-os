@@ -177,10 +177,12 @@ async def telegram_webhook(request: Request):
     """Receive updates from Telegram — smart response handler per F-012."""
     try:
         data = await request.json()
+        logger.info(f"Webhook received: {data}")
         message = data.get("message", {})
         chat_id = str(message.get("chat", {}).get("id", ""))
         text = message.get("text", "")
         voice = message.get("voice")
+        logger.info(f"Parsed: chat_id={chat_id}, text={text}, voice={voice}")
 
         if not chat_id:
             return {"ok": True}
@@ -204,10 +206,12 @@ async def telegram_webhook(request: Request):
                 select(User).where(User.telegram_chat_id == chat_id)
             )
             user = result.scalar_one_or_none()
+            logger.info(f"User lookup result: {user.display_name if user else 'None'}")
 
         await engine.dispose()
 
         if not user:
+            logger.info(f"User not linked for chat_id={chat_id}, sending link message")
             await _send_message(
                 chat_id,
                 f"Your Telegram is not linked to Locus.\n\nYour Chat ID is: `{chat_id}`\n\nGo to Locus Settings to link it.",
@@ -259,7 +263,11 @@ async def telegram_webhook(request: Request):
                 parse_mode="Markdown",
             )
         elif text and not text.startswith("/"):
+            logger.info(f"Generating smart response for text: {text}")
             response = _generate_smart_response(text)
+            logger.info(
+                f"Smart response generated: {response[:100] if response else 'None'}"
+            )
             if response:
                 await _send_message(chat_id, response, parse_mode="Markdown")
             else:
@@ -269,7 +277,7 @@ async def telegram_webhook(request: Request):
                 )
 
     except Exception as e:
-        pass
+        logger.error(f"Webhook error: {e}", exc_info=True)
 
     return {"ok": True}
 
