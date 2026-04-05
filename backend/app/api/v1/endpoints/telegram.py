@@ -3,6 +3,9 @@ from app.config import settings
 from app.engines.e1.dcs import calculate_dcs, Mode
 import httpx
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
 
@@ -274,15 +277,20 @@ async def telegram_webhook(request: Request):
 async def _send_message(chat_id: str, text: str, parse_mode: str = None):
     """Send a message back to the user via Telegram Bot API."""
     if not settings.TELEGRAM_BOT_TOKEN:
+        logger.error("No TELEGRAM_BOT_TOKEN configured")
         return
     payload = {"chat_id": chat_id, "text": text}
     if parse_mode:
         payload["parse_mode"] = parse_mode
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(
+            resp = await client.post(
                 f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
                 json=payload,
             )
-    except Exception:
-        pass
+            if resp.status_code != 200:
+                logger.error(f"Telegram API error {resp.status_code}: {resp.text}")
+            else:
+                logger.info(f"Telegram message sent to {chat_id}: {resp.json()}")
+    except Exception as e:
+        logger.error(f"Failed to send Telegram message to {chat_id}: {e}")
