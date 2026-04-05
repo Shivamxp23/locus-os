@@ -157,6 +157,15 @@ export { __resetModelCatalogCacheForTest } from "./server-model-catalog.js";
 
 ensureOpenClawCliOnPath();
 
+// LOCUS MODIFICATION 1+2+3 — bootstrap all modifications at startup
+import { bootstrapLocus } from "../config/locus-bootstrap.js";
+try {
+  bootstrapLocus();
+} catch (err) {
+  console.error("[LOCUS] Bootstrap failed:", err);
+  process.exit(1);
+}
+
 const MAX_MEDIA_TTL_HOURS = 24 * 7;
 
 function resolveMediaCleanupTtlMs(ttlHoursRaw: number): number {

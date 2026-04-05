@@ -1,0 +1,35 @@
+{
+  // ═══════════════════════════════════════════════════════════════
+  // Locus OpenClaw Configuration
+  // LOCUS MODIFICATION 2 — config locked to environment
+  // All sensitive values come from environment variables, not this file.
+  // This file is read-only reference. No runtime writes.
+  // ═══════════════════════════════════════════════════════════════
+
+  // Telegram channel — token comes from env TELEGRAM_TOKEN (aliased to TELEGRAM_BOT_TOKEN)
+  "channels": {
+    "telegram": {
+      "botToken": {
+        "source": "env",
+        "id": "TELEGRAM_TOKEN"
+      },
+      "dmPolicy": "allowlist",
+      "allowFrom": ["${TELEGRAM_OWNER_ID}"]
+    }
+  },
+
+  // LLM provider — Gemini via env key
+  "providers": {
+    "gemini": {
+      "apiKey": {
+        "source": "env",
+        "id": "GEMINI_API_KEY"
+      }
+    }
+  },
+
+  // Gateway mode for Telegram polling
+  "gateway": {
+    "mode": "multi-tenant"
+  }
+}

@@ -1,0 +1,84 @@
+# ═══════════════════════════════════════════════════════════════
+# Locus OS — Docker Compose (Production)
+# Target: Oracle Cloud ARM A1 (Ubuntu 22.04)
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # ── Locus API (FastAPI) ──────────────────────────────────────
+  locus-api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: locus-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../.env
+    environment:
+      - PORT=3000
+    networks:
+      - locus-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      locus-postgres:
+        condition: service_healthy
+
+  # ── OpenClaw (Telegram Bot + Agent) ──────────────────────────
+  locus-openclaw:
+    build:
+      context: ../openclaw
+      dockerfile: Dockerfile
+    container_name: locus-openclaw
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
+      - LOCUS_API_URL=http://locus-api:3000
+      - OPENCLAW_CONFIG_PATH=/app/config/locus.config.json
+    volumes:
+      - ../openclaw/config:/app/config:ro
+      - ../openclaw/skills:/app/skills:ro
+    networks:
+      - locus-net
+    depends_on:
+      locus-api:
+        condition: service_healthy
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  locus-postgres:
+    image: postgres:15-alpine
+    container_name: locus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: locus
+      POSTGRES_USER: locus
+      POSTGRES_PASSWORD: ${LOCUS_API_TOKEN:-locus-dev-password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - locus-pg-data:/var/lib/postgresql/data
+    networks:
+      - locus-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locus -d locus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# ── Volumes ────────────────────────────────────────────────────
+volumes:
+  locus-pg-data:
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────
+networks:
+  locus-net:
+    driver: bridge

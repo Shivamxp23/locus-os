@@ -7,6 +7,7 @@
 
 import { concatOptionalTextSegments } from "../shared/text/join-segments.js";
 import type { PluginRegistry } from "./registry.js";
+import { auditBeforeToolCall, auditAfterToolCall } from "./locus-audit-interceptor.js"; // LOCUS MODIFICATION 3 — audit interceptor
 import type {
   PluginHookAfterCompactionEvent,
   PluginHookAfterToolCallEvent,
@@ -731,6 +732,11 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     event: PluginHookBeforeToolCallEvent,
     ctx: PluginHookToolContext,
   ): Promise<PluginHookBeforeToolCallResult | undefined> {
+    // LOCUS MODIFICATION 3 — audit interceptor
+    const toolName = (event as { toolName?: string }).toolName ?? "unknown";
+    auditBeforeToolCall(toolName, (event as { params?: unknown }).params);
+    (ctx as { __locusAuditStart?: number }).__locusAuditStart = Date.now();
+
     return runModifyingHook<"before_tool_call", PluginHookBeforeToolCallResult>(
       "before_tool_call",
       event,
@@ -770,6 +776,11 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     event: PluginHookAfterToolCallEvent,
     ctx: PluginHookToolContext,
   ): Promise<void> {
+    // LOCUS MODIFICATION 3 — audit interceptor
+    const toolName = (event as { toolName?: string }).toolName ?? "unknown";
+    const startTime = (ctx as { __locusAuditStart?: number }).__locusAuditStart ?? Date.now();
+    auditAfterToolCall(toolName, startTime, "completed");
+
     return runVoidHook("after_tool_call", event, ctx);
   }
 
