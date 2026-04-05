@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y gcc libpq-dev curl && rm -rf /var/lib/a
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
-COPY ../infra/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 RUN mkdir -p /vault && chown -R 1000:1000 /vault
 EXPOSE 8000
