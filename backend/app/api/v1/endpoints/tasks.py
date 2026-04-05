@@ -72,48 +72,6 @@ async def create_task(
     await db.commit()
     await db.refresh(task)
 
-    # Fire and forget to Engine 1 — don't block the response
-    try:
-        from app.workers.celery_app import app as celery_app
-
-        celery_app.send_task(
-            "app.workers.tasks_e1.process_behavioral_event",
-            kwargs={
-                "event_data": {
-                    "type": "task_create",
-                    "user_id": current_user.id,
-                    "task_id": task.id,
-                    "title": task.title,
-                    "source": task.source,
-                    "created_at": task.created_at.isoformat(),
-                }
-            },
-            queue="engine1",
-        )
-    except Exception:
-        pass  # Don't fail the request if Celery is unavailable
-
-    # Fire and forget to Engine 3 — sync task to Notion
-    try:
-        from app.workers.celery_app import app as celery_app
-
-        celery_app.send_task(
-            "app.workers.tasks_e3.sync_task_to_notion",
-            kwargs={
-                "task_data": {
-                    "id": task.id,
-                    "title": task.title,
-                    "status": task.status,
-                    "source": task.source,
-                    "created_at": task.created_at.isoformat(),
-                    "user_id": str(current_user.id),
-                }
-            },
-            queue="engine3",
-        )
-    except Exception:
-        pass  # Don't fail the request if Celery is unavailable
-
     return _task_dict(task)
 
 
@@ -167,25 +125,6 @@ async def complete_task(
     task.completed_at = datetime.utcnow()
     task.updated_at = datetime.utcnow()
     await db.commit()
-    try:
-        from app.workers.celery_app import app as celery_app
-
-        celery_app.send_task(
-            "app.workers.tasks_e1.process_behavioral_event",
-            kwargs={
-                "event_data": {
-                    "type": "task_complete",
-                    "user_id": current_user.id,
-                    "task_id": task.id,
-                    "title": task.title,
-                    "source": "pwa",
-                    "created_at": datetime.utcnow().isoformat(),
-                }
-            },
-            queue="engine1",
-        )
-    except Exception:
-        pass
     return _task_dict(task)
 
 
@@ -200,26 +139,6 @@ async def defer_task(
     task.status = "deferred"
     task.updated_at = datetime.utcnow()
     await db.commit()
-    try:
-        from app.workers.celery_app import app as celery_app
-
-        celery_app.send_task(
-            "app.workers.tasks_e1.process_behavioral_event",
-            kwargs={
-                "event_data": {
-                    "type": "task_defer",
-                    "user_id": current_user.id,
-                    "task_id": task.id,
-                    "title": task.title,
-                    "deferral_count": task.deferral_count,
-                    "source": "pwa",
-                    "created_at": datetime.utcnow().isoformat(),
-                }
-            },
-            queue="engine1",
-        )
-    except Exception:
-        pass
     return _task_dict(task)
 
 

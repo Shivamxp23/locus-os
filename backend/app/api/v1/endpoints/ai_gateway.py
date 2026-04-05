@@ -6,10 +6,14 @@ from typing import Optional, List
 from datetime import datetime
 import httpx
 import uuid
+import time
+import logging
 from app.database import get_db
 from app.models.models import User, AiConversation
 from app.services.auth import get_current_user
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -45,28 +49,6 @@ async def chat(
     db.add(convo)
     await db.commit()
 
-    try:
-        from app.workers.celery_app import app as celery_app
-
-        last_user_msg = next(
-            (m["content"] for m in reversed(messages) if m["role"] == "user"), ""
-        )
-        celery_app.send_task(
-            "app.workers.tasks_e1.process_behavioral_event",
-            kwargs={
-                "event_data": {
-                    "type": "ai_chat",
-                    "user_id": current_user.id,
-                    "source": "ai_gateway",
-                    "content": last_user_msg,
-                    "created_at": datetime.utcnow().isoformat(),
-                }
-            },
-            queue="engine1",
-        )
-    except Exception:
-        pass
-
     return {"response": response_text, "model": model_used, "source": model_source}
 
 
@@ -84,69 +66,74 @@ async def voice_note(
     if not transcription:
         raise HTTPException(status_code=422, detail="Could not transcribe audio")
 
-    try:
-        from app.workers.celery_app import app as celery_app
-
-        celery_app.send_task(
-            "app.workers.tasks_e1.process_behavioral_event",
-            kwargs={
-                "event_data": {
-                    "type": "voice_note",
-                    "user_id": current_user.id,
-                    "source": "pwa",
-                    "content": transcription,
-                    "created_at": datetime.utcnow().isoformat(),
-                }
-            },
-            queue="engine1",
-        )
-    except Exception:
-        pass
-
     return {"transcription": transcription, "status": "logged"}
 
 
+async def _call_ollama(
+    messages: list, model: str = "llama3.1:8b"
+) -> tuple[str, str, str]:
+    """Call Ollama with 8 second timeout. Returns (response_text, model_used, source)."""
+    start = time.time()
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        resp = await client.post(
+            f"{settings.OLLAMA_URL}/api/chat",
+            json={"model": model, "messages": messages, "stream": False},
+        )
+        resp.raise_for_status()
+        elapsed = time.time() - start
+        logger.info(f"Ollama response in {elapsed:.2f}s using {model}")
+        return resp.json()["message"]["content"], model, "ollama"
+
+
+async def _call_groq(messages: list) -> tuple[str, str, str]:
+    """Call Groq as fallback. Returns (response_text, model_used, source)."""
+    start = time.time()
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
+            json={"model": "llama-3.1-70b-versatile", "messages": messages},
+        )
+        resp.raise_for_status()
+        elapsed = time.time() - start
+        logger.info(f"Groq response in {elapsed:.2f}s using llama-3.1-70b-versatile")
+        return (
+            resp.json()["choices"][0]["message"]["content"],
+            "llama-3.1-70b-versatile",
+            "groq",
+        )
+
+
 async def _route_llm(messages: list) -> tuple[str, str, str]:
+    """
+    AI Gateway routing with clean fallback:
+    1. Try Ollama (8s timeout)
+    2. If exception OR timeout → retry Ollama once
+    3. If retry fails → fall back to Groq
+    Logs which model was used on every call.
+    """
+    # First attempt: Ollama
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                f"{settings.OLLAMA_URL}/api/chat",
-                json={"model": "llama3.1:8b", "messages": messages, "stream": False},
-            )
-            if resp.status_code == 200:
-                return resp.json()["message"]["content"], "llama3.1:8b", "ollama"
-    except Exception:
-        pass
+        return await _call_ollama(messages)
+    except Exception as e:
+        logger.warning(f"Ollama first attempt failed: {e}")
 
-    if settings.GEMINI_API_KEY:
-        try:
-            import google.generativeai as genai
+    # Second attempt: retry Ollama once
+    try:
+        logger.info("Retrying Ollama (second attempt)")
+        return await _call_ollama(messages)
+    except Exception as e:
+        logger.warning(f"Ollama retry failed: {e}")
 
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-            response = model.generate_content(prompt)
-            return response.text, "gemini-2.0-flash", "gemini"
-        except Exception:
-            pass
-
+    # Final fallback: Groq
     if settings.GROQ_API_KEY:
         try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
-                    json={"model": "llama-3.1-8b-instant", "messages": messages},
-                )
-                if resp.status_code == 200:
-                    return (
-                        resp.json()["choices"][0]["message"]["content"],
-                        "llama-3.1-8b-instant",
-                        "groq",
-                    )
-        except Exception:
-            pass
+            logger.info("Falling back to Groq")
+            return await _call_groq(messages)
+        except Exception as e:
+            logger.error(f"Groq fallback failed: {e}")
 
+    logger.error("All AI services unavailable")
     return "All AI services are currently unavailable.", "none", "none"
 
 

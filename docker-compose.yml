@@ -106,10 +106,13 @@ services:
     build: ./backend
     container_name: locus-api
     restart: always
+    user: "1000:1000"
     environment:
       <<: *fastapi-env
     volumes:
       - obsidian-vault:/vault
+      - ./infra/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,61 +122,18 @@ services:
       - locus-net
     ports:
       - "3000:8000"
-
-  celery-e1:
-    build: ./backend
-    container_name: locus-celery-e1
-    restart: always
-    command: celery -A app.workers.celery_app worker -Q engine1 --concurrency=2 -n engine1@%h
-    environment:
-      <<: *fastapi-env
-    volumes:
-      - obsidian-vault:/vault
-    depends_on:
-      - fastapi
-    networks:
-      - locus-net
-
-  celery-e2:
-    build: ./backend
-    container_name: locus-celery-e2
-    restart: always
-    command: celery -A app.workers.celery_app worker -Q engine2 --concurrency=1 -n engine2@%h
-    environment:
-      <<: *fastapi-env
-    depends_on:
-      - fastapi
-    networks:
-      - locus-net
-
-  celery-e3:
-    build: ./backend
-    container_name: locus-celery-e3
-    restart: always
-    command: celery -A app.workers.celery_app worker -Q engine3 --concurrency=2 -n engine3@%h
-    environment:
-      <<: *fastapi-env
-    depends_on:
-      - fastapi
-    networks:
-      - locus-net
-
-  celery-beat:
-    build: ./backend
-    container_name: locus-beat
-    restart: always
-    command: celery -A app.workers.celery_app beat 
-    environment:
-      <<: *fastapi-env
-    depends_on:
-      - fastapi
-    networks:
-      - locus-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/system/health')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   syncthing:
     image: syncthing/syncthing:latest
     container_name: locus-syncthing
     restart: always
+    user: "1000:1000"
     volumes:
       - obsidian-vault:/vault
       - syncthing-data:/var/syncthing

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
     display_name TEXT NOT NULL,
+    hashed_password TEXT,
     timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
     genesis_completed BOOLEAN DEFAULT FALSE,
     genesis_data JSONB,
@@ -211,3 +212,115 @@ CREATE TABLE IF NOT EXISTS personality_snapshots (
     snapshot_data JSONB NOT NULL,
     version INTEGER DEFAULT 1
 );
+
+-- F-001: Morning Metric Logging & F-007: Evening Protocol Logging
+CREATE TABLE IF NOT EXISTS daily_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    energy_score INTEGER CHECK (energy_score BETWEEN 1 AND 10),
+    mood_score INTEGER CHECK (mood_score BETWEEN 1 AND 10),
+    sleep_score INTEGER CHECK (sleep_score BETWEEN 1 AND 10),
+    stress_score INTEGER CHECK (stress_score BETWEEN 1 AND 10),
+    time_available FLOAT,
+    dcs_score FLOAT,
+    mode TEXT CHECK (mode IN ('SURVIVAL','RECOVERY','NORMAL','DEEP_WORK','PEAK')),
+    morning_logged_at TIMESTAMPTZ,
+    evening_logged_at TIMESTAMPTZ,
+    what_i_did TEXT,
+    what_i_avoided TEXT,
+    tomorrow_priority TEXT,
+    UNIQUE(user_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_daily_logs_user_date ON daily_logs(user_id, date DESC);
+
+-- F-010: Link Dump Logging
+CREATE TABLE IF NOT EXISTS saved_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    url TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    faction TEXT CHECK (faction IN ('health','leverage','craft','expression')),
+    tags TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_saved_links_user ON saved_links(user_id);
+
+-- F-011: Rough Note / Idea Capture
+CREATE TABLE IF NOT EXISTS raw_notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    note_type TEXT CHECK (note_type IN ('idea','note','journal')),
+    enriched_content TEXT,
+    suggested_faction TEXT,
+    suggested_project_id UUID,
+    obsidian_path TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    processed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_raw_notes_user ON raw_notes(user_id);
+
+-- F-093: Audit Log
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL,
+    method TEXT NOT NULL,
+    payload_hash TEXT,
+    response_status INTEGER,
+    duration_ms INTEGER,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+
+-- F-100: LLM Training Data for Fine-tuning
+CREATE TABLE IF NOT EXISTS llm_training_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    task_type TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    response TEXT NOT NULL,
+    model_used TEXT NOT NULL,
+    model_source TEXT NOT NULL,
+    reward INTEGER CHECK (reward IN (-1, 0, 1)),
+    feedback_notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_llm_training_user ON llm_training_data(user_id);
+CREATE INDEX IF NOT EXISTS idx_llm_training_reward ON llm_training_data(reward) WHERE reward IS NOT NULL;
+
+-- F-025, F-034: Faction Weekly Metrics
+CREATE TABLE IF NOT EXISTS faction_weekly_metrics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    faction TEXT NOT NULL CHECK (faction IN ('health','leverage','craft','expression')),
+    week_start DATE NOT NULL,
+    target_hours FLOAT DEFAULT 0,
+    actual_hours FLOAT DEFAULT 0,
+    completion_rate FLOAT DEFAULT 0,
+    consistency_score FLOAT DEFAULT 0,
+    momentum_score FLOAT,
+    lag_score FLOAT DEFAULT 0,
+    action_gap FLOAT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, faction, week_start)
+);
+CREATE INDEX IF NOT EXISTS idx_faction_metrics_user_week ON faction_weekly_metrics(user_id, week_start DESC);
+
+-- F-041, F-042: AI Reports
+CREATE TABLE IF NOT EXISTS ai_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    report_type TEXT NOT NULL CHECK (report_type IN ('weekly_pattern','weekly_self','monthly','quarterly')),
+    title TEXT,
+    content TEXT NOT NULL,
+    week_start DATE,
+    generated_at TIMESTAMPTZ DEFAULT NOW(),
+    delivered_at TIMESTAMPTZ,
+    delivery_channel TEXT CHECK (delivery_channel IN ('telegram','pwa','both'))
+);
+CREATE INDEX IF NOT EXISTS idx_ai_reports_user ON ai_reports(user_id, generated_at DESC);
