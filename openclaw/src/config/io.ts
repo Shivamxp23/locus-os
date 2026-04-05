@@ -2588,7 +2588,7 @@ const LOCUS_ENV_CONFIG_CACHE: { config: OpenClawConfig | null; timestamp: number
  * No file-based config is read.
  */
 function buildEnvOnlyConfig(): OpenClawConfig {
-  const config: OpenClawConfig = {};
+  const config: Record<string, unknown> = {};
 
   // LLM provider API keys from env
   if (process.env.OPENAI_API_KEY) config.openai = { apiKey: process.env.OPENAI_API_KEY };
@@ -2603,7 +2603,7 @@ function buildEnvOnlyConfig(): OpenClawConfig {
 
   // Gateway config
   if (process.env.OPENCLAW_GATEWAY_TOKEN) {
-    config.gateway = { auth: process.env.OPENCLAW_GATEWAY_TOKEN };
+    config.gateway = { auth: { token: process.env.OPENCLAW_GATEWAY_TOKEN } };
   }
 
   // Agent defaults
@@ -2619,7 +2619,7 @@ function buildEnvOnlyConfig(): OpenClawConfig {
     limits: { maxSkillsInPrompt: 50, maxSkillsPromptChars: 15000 },
   };
 
-  return config;
+  return config as unknown as OpenClawConfig;
 }
 
 // Override loadConfig to return env-only config

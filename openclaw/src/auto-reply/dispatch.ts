@@ -21,21 +21,30 @@ import type { GetReplyOptions } from "./types.js";
 // ============================================================================
 
 async function locusInterceptRequest(ctx: MsgContext | FinalizedMsgContext): Promise<void> {
-  // Audit log the inbound request to Locus
   try {
     const auditUrl = process.env.LOCUS_AUDIT_URL;
     if (auditUrl) {
-      const body = JSON.stringify({
-        channel: ctx.origin?.channelId ?? "unknown",
-        sessionId: ctx.sessionId,
-        bodyPreview: typeof ctx.body === "string" ? ctx.body.substring(0, 500) : "",
+      const ctxAny = ctx as Record<string, unknown>;
+      const originObj = ctxAny.origin as Record<string, unknown> | undefined;
+      const channelId =
+        originObj && typeof originObj.channelId === "string"
+          ? originObj.channelId
+          : "unknown";
+      const sessionId =
+        typeof ctxAny.sessionId === "string" ? ctxAny.sessionId : "";
+      const rawBody = ctxAny.body as unknown;
+      const bodyPreview =
+        typeof rawBody === "string" ? rawBody.substring(0, 500) : "";
+      const payload = JSON.stringify({
+        channel: channelId,
+        sessionId,
+        bodyPreview,
         timestamp: new Date().toISOString(),
       });
-      // Fire and forget — don't block the message pipeline
       fetch(auditUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body,
+        body: payload,
       }).catch(() => undefined);
     }
   } catch {
