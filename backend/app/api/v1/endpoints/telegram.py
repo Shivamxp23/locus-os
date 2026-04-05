@@ -178,7 +178,11 @@ async def telegram_webhook(request: Request):
     try:
         body = await request.body()
         logger.info(f"Webhook raw body: {body.decode('utf-8', errors='replace')}")
-        data = await request.json()
+        try:
+            data = await request.json()
+        except Exception as json_err:
+            logger.error(f"JSON parse error: {json_err}")
+            return {"ok": True}
         logger.info(f"Webhook received: {data}")
         message = data.get("message", {})
         chat_id = str(message.get("chat", {}).get("id", ""))
