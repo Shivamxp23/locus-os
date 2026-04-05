@@ -396,7 +396,7 @@ async function resolveTrackedUpdateTarget(params: {
   };
 }
 
-export async function installSkillFromClawHub(_params: {
+export async function installSkillFromClawHub(params: {
   workspaceDir: string;
   slug: string;
   version?: string;
@@ -404,28 +404,66 @@ export async function installSkillFromClawHub(_params: {
   force?: boolean;
   logger?: Logger;
 }): Promise<InstallClawHubSkillResult> {
-  return { ok: false, error: "ClawHub skill registry is disabled by Locus configuration." };
+  return await installRequestedSkillFromClawHub(params);
 }
 
-export async function updateSkillsFromClawHub(_params: {
+export async function updateSkillsFromClawHub(params: {
   workspaceDir: string;
   slug?: string;
   baseUrl?: string;
   logger?: Logger;
 }): Promise<UpdateClawHubSkillResult[]> {
-  return [];
+  const lock = await readClawHubSkillsLockfile(params.workspaceDir);
+  const slugs = params.slug
+    ? [
+        await resolveRequestedUpdateSlug({
+          workspaceDir: params.workspaceDir,
+          requestedSlug: params.slug,
+          lock,
+        }),
+      ]
+    : Object.keys(lock.skills).map((slug) => normalizeTrackedSlug(slug));
+  const results: UpdateClawHubSkillResult[] = [];
+  for (const slug of slugs) {
+    const tracked = await resolveTrackedUpdateTarget({
+      workspaceDir: params.workspaceDir,
+      slug,
+      lock,
+      baseUrl: params.baseUrl,
+    });
+    if (!tracked.ok) {
+      results.push({
+        ok: false,
+        error: tracked.error,
+      });
+      continue;
+    }
+    const install = await installTrackedSkillFromClawHub({
+      workspaceDir: params.workspaceDir,
+      slug: tracked.slug,
+      baseUrl: tracked.baseUrl,
+      force: true,
+      logger: params.logger,
+    });
+    if (!install.ok) {
+      results.push(install);
+      continue;
+    }
+    results.push({
+      ok: true,
+      slug: tracked.slug,
+      previousVersion: tracked.previousVersion,
+      version: install.version,
+      changed: tracked.previousVersion !== install.version,
+      targetDir: install.targetDir,
+    });
+  }
+  return results;
 }
 
-export async function search_skillsFromClawHub(_params: {
-  query?: string;
-  limit?: number;
-  baseUrl?: string;
-}): Promise<ClawHubSkillSearchResult[]> {
-  return [];
-}
-
-export async function readTrackedClawHubSkillSlugs(_workspaceDir: string): Promise<string[]> {
-  return [];
+export async function readTrackedClawHubSkillSlugs(workspaceDir: string): Promise<string[]> {
+  const lock = await readClawHubSkillsLockfile(workspaceDir);
+  return Object.keys(lock.skills).toSorted();
 }
 
 export async function computeSkillFingerprint(skillDir: string): Promise<string> {

@@ -510,6 +510,21 @@ function createMergePatch(base: unknown, target: unknown): unknown {
   return patch;
 }
 
+function projectSourceOntoRuntimeShape(source: unknown, runtime: unknown): unknown {
+  if (!isPlainObject(source) || !isPlainObject(runtime)) {
+    return cloneUnknown(source);
+  }
+
+  const next: Record<string, unknown> = {};
+  for (const [key, sourceValue] of Object.entries(source)) {
+    if (!(key in runtime)) {
+      continue;
+    }
+    next[key] = projectSourceOntoRuntimeShape(sourceValue, runtime[key]);
+  }
+  return next;
+}
+
 function collectEnvRefPaths(value: unknown, path: string, output: Map<string, string>): void {
   if (typeof value === "string") {
     if (containsEnvVarReference(value)) {
@@ -2086,7 +2101,8 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
     let changedPaths: Set<string> | null = null;
     if (snapshot.valid && snapshot.exists) {
       const patch = createMergePatch(snapshot.config, cfg);
-      persistCandidate = applyMergePatch(snapshot.resolved, patch);
+      const projectedSource = projectSourceOntoRuntimeShape(snapshot.resolved, snapshot.config);
+      persistCandidate = applyMergePatch(projectedSource, patch);
       try {
         const resolvedIncludes = resolveConfigIncludes(snapshot.parsed, configPath, {
           readFile: (candidate) => deps.fs.readFileSync(candidate, "utf-8"),
@@ -2456,8 +2472,11 @@ export function projectConfigOntoRuntimeSourceSnapshot(config: OpenClawConfig): 
   ) {
     return config;
   }
+  const projectedSource = coerceConfig(
+    projectSourceOntoRuntimeShape(runtimeConfigSourceSnapshot, runtimeConfigSnapshot),
+  );
   const runtimePatch = createMergePatch(runtimeConfigSnapshot, config);
-  return coerceConfig(applyMergePatch(runtimeConfigSourceSnapshot, runtimePatch));
+  return coerceConfig(applyMergePatch(projectedSource, runtimePatch));
 }
 
 export function loadConfig(): OpenClawConfig {
@@ -2571,62 +2590,3 @@ export async function writeConfigFile(
   setRuntimeConfigSnapshotState(io.loadConfig());
   notifyCommittedWrite();
 }
-
-// ============================================================================
-// MODIFICATION 2 (Locus): Lock config to environment variables only.
-// OpenClaw config is derived entirely from process.env. No file-based config
-// is read or written. This prevents accidental config file mutations.
-// ============================================================================
-
-const LOCUS_ENV_CONFIG_CACHE: { config: OpenClawConfig | null; timestamp: number } = {
-  config: null,
-  timestamp: 0,
-};
-
-/**
- * Build an OpenClaw config from environment variables only.
- * No file-based config is read.
- */
-function buildEnvOnlyConfig(): OpenClawConfig {
-  const config: Record<string, unknown> = {};
-
-  // LLM provider API keys from env
-  if (process.env.OPENAI_API_KEY) config.openai = { apiKey: process.env.OPENAI_API_KEY };
-  if (process.env.ANTHROPIC_API_KEY) config.anthropic = { apiKey: process.env.ANTHROPIC_API_KEY };
-  if (process.env.GEMINI_API_KEY) config.gemini = { apiKey: process.env.GEMINI_API_KEY };
-  if (process.env.OPENROUTER_API_KEY) config.openrouter = { apiKey: process.env.OPENROUTER_API_KEY };
-
-  // Telegram config
-  if (process.env.TELEGRAM_BOT_TOKEN) {
-    config.telegram = { token: process.env.TELEGRAM_BOT_TOKEN };
-  }
-
-  // Gateway config
-  if (process.env.OPENCLAW_GATEWAY_TOKEN) {
-    config.gateway = { auth: { token: process.env.OPENCLAW_GATEWAY_TOKEN } };
-  }
-
-  // Agent defaults
-  config.agents = {
-    defaults: {
-      model: process.env.OPENCLAW_MODEL || "anthropic/claude-sonnet-4-20250514",
-    },
-  };
-
-  // Skills: only load from local directories, no registry
-  config.skills = {
-    load: { watch: false },
-    limits: { maxSkillsInPrompt: 50, maxSkillsPromptChars: 15000 },
-  };
-
-  return config as unknown as OpenClawConfig;
-}
-
-// Override loadConfig to return env-only config
-const _originalLoadConfig = loadConfig;
-(loadConfig as any).__locus_original = _originalLoadConfig;
-
-// We need to patch at the module level. Since loadConfig is exported,
-// we patch the runtime snapshot state to always return env-only config.
-const _locusEnvConfig = buildEnvOnlyConfig();
-setRuntimeConfigSnapshotState(_locusEnvConfig);

@@ -35,18 +35,26 @@ function assertBaseHashMatches(snapshot: ConfigFileSnapshot, expectedHash?: stri
   return currentHash;
 }
 
-// MODIFICATION 2 (Locus): Lock config to environment — all file mutations are no-ops.
-// Config is derived entirely from process.env. No file writes are permitted.
-
-export async function replaceConfigFile(_params: {
+export async function replaceConfigFile(params: {
   nextConfig: OpenClawConfig;
   baseHash?: string;
   writeOptions?: ConfigWriteOptions;
 }): Promise<ConfigReplaceResult> {
-  throw new Error("Config file mutation is disabled — config is locked to environment variables.");
+  const { snapshot, writeOptions } = await readConfigFileSnapshotForWrite();
+  const previousHash = assertBaseHashMatches(snapshot, params.baseHash);
+  await writeConfigFile(params.nextConfig, {
+    ...writeOptions,
+    ...params.writeOptions,
+  });
+  return {
+    path: snapshot.path,
+    previousHash,
+    snapshot,
+    nextConfig: params.nextConfig,
+  };
 }
 
-export async function mutateConfigFile<T = void>(_params: {
+export async function mutateConfigFile<T = void>(params: {
   base?: ConfigMutationBase;
   baseHash?: string;
   writeOptions?: ConfigWriteOptions;
@@ -55,5 +63,20 @@ export async function mutateConfigFile<T = void>(_params: {
     context: { snapshot: ConfigFileSnapshot; previousHash: string | null },
   ) => Promise<T | void> | T | void;
 }): Promise<ConfigReplaceResult & { result: T | undefined }> {
-  throw new Error("Config file mutation is disabled — config is locked to environment variables.");
+  const { snapshot, writeOptions } = await readConfigFileSnapshotForWrite();
+  const previousHash = assertBaseHashMatches(snapshot, params.baseHash);
+  const baseConfig = params.base === "runtime" ? snapshot.runtimeConfig : snapshot.sourceConfig;
+  const draft = structuredClone(baseConfig) as OpenClawConfig;
+  const result = (await params.mutate(draft, { snapshot, previousHash })) as T | undefined;
+  await writeConfigFile(draft, {
+    ...writeOptions,
+    ...params.writeOptions,
+  });
+  return {
+    path: snapshot.path,
+    previousHash,
+    snapshot,
+    nextConfig: draft,
+    result,
+  };
 }

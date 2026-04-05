@@ -12,46 +12,6 @@ import {
 import type { FinalizedMsgContext, MsgContext } from "./templating.js";
 import type { GetReplyOptions } from "./types.js";
 
-// ============================================================================
-// MODIFICATION 3 (Locus): Request interceptor
-// Intercepts all inbound messages to:
-// 1. Log to Locus audit endpoint
-// 2. Enrich context with Locus-specific metadata
-// 3. Route Locus-specific commands to skill handlers
-// ============================================================================
-
-async function locusInterceptRequest(ctx: MsgContext | FinalizedMsgContext): Promise<void> {
-  try {
-    const auditUrl = process.env.LOCUS_AUDIT_URL;
-    if (auditUrl) {
-      const ctxAny = ctx as Record<string, unknown>;
-      const originObj = ctxAny.origin as Record<string, unknown> | undefined;
-      const channelId =
-        originObj && typeof originObj.channelId === "string"
-          ? originObj.channelId
-          : "unknown";
-      const sessionId =
-        typeof ctxAny.sessionId === "string" ? ctxAny.sessionId : "";
-      const rawBody = ctxAny.body as unknown;
-      const bodyPreview =
-        typeof rawBody === "string" ? rawBody.substring(0, 500) : "";
-      const payload = JSON.stringify({
-        channel: channelId,
-        sessionId,
-        bodyPreview,
-        timestamp: new Date().toISOString(),
-      });
-      fetch(auditUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-      }).catch(() => undefined);
-    }
-  } catch {
-    // Never let audit failures block message processing
-  }
-}
-
 export type DispatchInboundResult = DispatchFromConfigResult;
 
 export async function withReplyDispatcher<T>(params: {
@@ -79,9 +39,6 @@ export async function dispatchInboundMessage(params: {
   replyOptions?: Omit<GetReplyOptions, "onToolResult" | "onBlockReply">;
   replyResolver?: typeof import("./reply.js").getReplyFromConfig;
 }): Promise<DispatchInboundResult> {
-  // Locus interceptor: audit log and enrich context before dispatch
-  await locusInterceptRequest(params.ctx);
-
   const finalized = finalizeInboundContext(params.ctx);
   return await withReplyDispatcher({
     dispatcher: params.dispatcher,

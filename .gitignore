@@ -81,8 +81,8 @@ coverage/
 .nyc_output/
 
 # archived planning docs
-.archived planning docs/
-.miscellanneous/
+.Keys and Documents/
 *.key
 *.pem
 *.pub
+Appledore
