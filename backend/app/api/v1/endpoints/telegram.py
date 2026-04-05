@@ -176,6 +176,8 @@ def _generate_smart_response(text: str) -> str:
 async def telegram_webhook(request: Request):
     """Receive updates from Telegram — smart response handler per F-012."""
     try:
+        body = await request.body()
+        logger.info(f"Webhook raw body: {body.decode('utf-8', errors='replace')}")
         data = await request.json()
         logger.info(f"Webhook received: {data}")
         message = data.get("message", {})
