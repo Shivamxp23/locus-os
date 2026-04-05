@@ -1,16 +1,16 @@
 {
   "gateway": {
-    "auth": "${OPENCLAW_GATEWAY_TOKEN}",
+    "auth": { "token": "locus-gateway-token-2026" },
     "port": 18789,
     "bind": "lan"
   },
   "telegram": {
-    "token": "${TELEGRAM_BOT_TOKEN}",
-    "ownerId": "${TELEGRAM_OWNER_ID}"
+    "token": "8249321165:AAHOqwRqSMfzBQx5Fbndl1B99WQnUOf_GlI",
+    "ownerId": "8089688853"
   },
   "skills": {
     "load": {
-      "extraDirs": ["/skills"],
+      "extraDirs": ["/opt/locus/openclaw/skills"],
       "watch": false
     },
     "limits": {
@@ -20,8 +20,7 @@
   },
   "agents": {
     "defaults": {
-      "model": "ollama/llama3.1:8b",
-      "baseUrl": "${LOCUS_OLLAMA_URL}"
+      "model": "ollama/llama3.1:8b"
     }
   }
 }

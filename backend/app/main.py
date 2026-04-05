@@ -10,6 +10,7 @@ from app.api.v1.endpoints.ai_gateway import router as ai_router
 from app.api.v1.endpoints.sync import router as sync_router
 from app.api.v1.endpoints.integrations import router as integrations_router
 from app.api.v1.endpoints.audit import router as audit_router
+from app.api.v1.endpoints.log import router as log_router
 from app.services.qdrant_service import ensure_collections
 
 
@@ -50,6 +51,7 @@ app.include_router(ai_router)
 app.include_router(sync_router)
 app.include_router(integrations_router)
 app.include_router(audit_router)
+app.include_router(log_router)
 
 
 @app.get("/")

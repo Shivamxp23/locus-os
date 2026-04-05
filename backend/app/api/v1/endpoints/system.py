@@ -7,6 +7,7 @@ from app.config import settings
 
 router = APIRouter(tags=["system"])
 
+
 @router.get("/status")
 async def status():
     db_status = "disconnected"
@@ -19,8 +20,8 @@ async def status():
         pass
     return {"status": "ok", "service": "locus-api", "version": "0.1.0", "postgres": db_status}
 
-@router.get("/api/system/health")
-async def health():
+
+async def _run_health_checks() -> dict:
     result = {}
 
     try:
@@ -53,6 +54,13 @@ async def health():
     except Exception:
         result["qdrant"] = "error"
 
+    return result
+
+
+@router.get("/health")
+@router.get("/api/system/health")
+async def health():
+    result = await _run_health_checks()
     all_ok = all(v == "ok" for v in result.values())
     return {
         "status": "healthy" if all_ok else "degraded",
