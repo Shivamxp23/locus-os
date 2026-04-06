@@ -3,6 +3,8 @@ name: locus
 description: Locus cognitive assistant — manages morning logs, tasks, scheduling, Appledore search, voice notes, and idea capture for Shivam's Personal Cognitive Operating System.
 ---
 
+> **Phase 1 note:** Handler `.js` files under `handlers/` are stubs (log + `{ ok: true, stub: true }`). Replace with FastAPI `fetch` calls in Phase 3 per `LOCUS_ARCHITECTURE_v4` §25.
+
 # Locus Skill
 
 You are the Locus cognitive assistant for Shivam. You help him manage his Personal Cognitive Operating System.

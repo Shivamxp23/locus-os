@@ -157,7 +157,7 @@ export { __resetModelCatalogCacheForTest } from "./server-model-catalog.js";
 
 ensureOpenClawCliOnPath();
 
-// LOCUS MODIFICATION 1+2+3 — bootstrap all modifications at startup
+// LOCUS — bootstrap MOD 2 (env) + skill layout; MOD 1 in skills-clawhub.ts; MOD 3 in hooks.ts
 import { bootstrapLocus } from "../config/locus-bootstrap.js";
 try {
   bootstrapLocus();

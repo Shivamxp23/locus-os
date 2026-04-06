@@ -8,13 +8,19 @@
  *   1. Logged to console (always)
  *   2. Sent via non-blocking POST to ${LOCUS_API_URL}/api/v1/internal/audit/openclaw
  *
- * If the FastAPI backend is unreachable, the event is written to console only.
+ * If the FastAPI backend is unreachable, the event is appended to a local fallback log
+ * under the system temp directory (non-blocking) in addition to console.
  * Audit logging NEVER blocks or fails a tool call.
  */
+
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 // LOCUS MODIFICATION 3 — audit interceptor
 const LOCUS_API_URL = process.env.LOCUS_API_URL || "http://localhost:3000";
 const LOCUS_SERVICE_TOKEN = process.env.LOCUS_SERVICE_TOKEN || "";
+const LOCUS_AUDIT_FALLBACK_LOG = path.join(os.tmpdir(), "locus-openclaw-audit-fallback.log");
 
 export interface AuditEvent {
   event_type: "tool_call_start" | "tool_call_end";
@@ -44,6 +50,13 @@ function fireAuditEvent(event: AuditEvent): void {
     }).catch((err: Error) => {
       // LOCUS MODIFICATION 3 — audit interceptor: never block on failure
       console.warn(`[LOCUS:AUDIT] Failed to send audit event: ${err.message}`);
+      void fs
+        .appendFile(
+          LOCUS_AUDIT_FALLBACK_LOG,
+          `${JSON.stringify({ ...event, _locus_audit_network_error: err.message })}\n`,
+          "utf8",
+        )
+        .catch(() => undefined);
     });
   } catch {
     // LOCUS MODIFICATION 3 — audit interceptor: swallow all errors

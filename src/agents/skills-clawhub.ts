@@ -6,13 +6,21 @@ import {
   downloadClawHubSkillArchive,
   fetchClawHubSkillDetail,
   resolveClawHubBaseUrl,
-  searchClawHubSkills,
   type ClawHubSkillDetail,
   type ClawHubSkillSearchResult,
 } from "../infra/clawhub.js";
 import { withExtractedArchiveRoot } from "../infra/install-flow.js";
 import { installPackageDir } from "../infra/install-package-dir.js";
 import { resolveSafeInstallDir } from "../infra/install-safe-path.js";
+
+// LOCUS MODIFICATION 1 — external skill registry disabled
+const LOCUS_EXTERNAL_SKILL_DISABLED_MESSAGE =
+  "LOCUS MODIFICATION 1: External skill installation disabled.";
+
+/** Locus build: ClawHub/network skill install is blocked (§7.2). */
+function locusDisallowExternalSkillRegistry(): never {
+  throw new Error(LOCUS_EXTERNAL_SKILL_DISABLED_MESSAGE);
+}
 
 const DOT_DIR = ".clawhub";
 const LEGACY_DOT_DIR = ".clawdhub";
@@ -207,16 +215,13 @@ export async function writeClawHubSkillOrigin(
   await fs.writeFile(targetPath, `${JSON.stringify(origin, null, 2)}\n`, "utf8");
 }
 
-export async function searchSkillsFromClawHub(params: {
+export async function searchSkillsFromClawHub(_params: {
   query?: string;
   limit?: number;
   baseUrl?: string;
 }): Promise<ClawHubSkillSearchResult[]> {
-  return await searchClawHubSkills({
-    query: params.query?.trim() || "*",
-    limit: params.limit,
-    baseUrl: params.baseUrl,
-  });
+  // LOCUS MODIFICATION 1 — external skill registry disabled
+  locusDisallowExternalSkillRegistry();
 }
 
 async function resolveInstallVersion(params: {
@@ -396,7 +401,7 @@ async function resolveTrackedUpdateTarget(params: {
   };
 }
 
-export async function installSkillFromClawHub(params: {
+export async function installSkillFromClawHub(_params: {
   workspaceDir: string;
   slug: string;
   version?: string;
@@ -404,61 +409,18 @@ export async function installSkillFromClawHub(params: {
   force?: boolean;
   logger?: Logger;
 }): Promise<InstallClawHubSkillResult> {
-  return await installRequestedSkillFromClawHub(params);
+  // LOCUS MODIFICATION 1 — external skill registry disabled
+  locusDisallowExternalSkillRegistry();
 }
 
-export async function updateSkillsFromClawHub(params: {
+export async function updateSkillsFromClawHub(_params: {
   workspaceDir: string;
   slug?: string;
   baseUrl?: string;
   logger?: Logger;
 }): Promise<UpdateClawHubSkillResult[]> {
-  const lock = await readClawHubSkillsLockfile(params.workspaceDir);
-  const slugs = params.slug
-    ? [
-        await resolveRequestedUpdateSlug({
-          workspaceDir: params.workspaceDir,
-          requestedSlug: params.slug,
-          lock,
-        }),
-      ]
-    : Object.keys(lock.skills).map((slug) => normalizeTrackedSlug(slug));
-  const results: UpdateClawHubSkillResult[] = [];
-  for (const slug of slugs) {
-    const tracked = await resolveTrackedUpdateTarget({
-      workspaceDir: params.workspaceDir,
-      slug,
-      lock,
-      baseUrl: params.baseUrl,
-    });
-    if (!tracked.ok) {
-      results.push({
-        ok: false,
-        error: tracked.error,
-      });
-      continue;
-    }
-    const install = await installTrackedSkillFromClawHub({
-      workspaceDir: params.workspaceDir,
-      slug: tracked.slug,
-      baseUrl: tracked.baseUrl,
-      force: true,
-      logger: params.logger,
-    });
-    if (!install.ok) {
-      results.push(install);
-      continue;
-    }
-    results.push({
-      ok: true,
-      slug: tracked.slug,
-      previousVersion: tracked.previousVersion,
-      version: install.version,
-      changed: tracked.previousVersion !== install.version,
-      targetDir: install.targetDir,
-    });
-  }
-  return results;
+  // LOCUS MODIFICATION 1 — external skill registry disabled
+  locusDisallowExternalSkillRegistry();
 }
 
 export async function readTrackedClawHubSkillSlugs(workspaceDir: string): Promise<string[]> {

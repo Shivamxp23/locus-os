@@ -1,10 +1,9 @@
 /**
- * LOCUS BOOTSTRAP — Runs all Locus modifications at startup
+ * LOCUS bootstrap — runs before the rest of the gateway starts.
  *
- * Import this module early in OpenClaw's initialization to activate:
- *   - MODIFICATION 1: Validate Locus skill is present
- *   - MODIFICATION 2: Validate required environment variables
- *   - MODIFICATION 3: Audit interceptor (wired via hooks.ts import)
+ * - MODIFICATION 1 (external skills): enforced in src/agents/skills-clawhub.ts
+ * - MODIFICATION 2: validate required env (src/config/locus-env-validator.ts)
+ * - MODIFICATION 3: audit hooks wired in src/plugins/hooks.ts
  */
 
 import { validateLocusSkillPresent } from "../plugins/locus-skill-validator.js";
@@ -16,13 +15,13 @@ export function bootstrapLocus(): void {
   console.log("[LOCUS] Running startup validations...");
   console.log("[LOCUS] ═══════════════════════════════════════════");
 
-  // MODIFICATION 2 — validate env vars first (needed by everything else)
+  // LOCUS MODIFICATION 2 — config locked to environment
   validateLocusConfig();
 
-  // MODIFICATION 1 — validate Locus skill is present
   validateLocusSkillPresent();
 
-  // MODIFICATION 3 — audit interceptor is wired via hooks.ts import
+  console.log("[LOCUS] ✓ ClawHub skill install disabled (MODIFICATION 1)");
+  // LOCUS MODIFICATION 3 — audit interceptor (wired in hooks.ts)
   console.log("[LOCUS] ✓ Audit interceptor active (wired in hooks.ts)");
 
   console.log("[LOCUS] ═══════════════════════════════════════════");
