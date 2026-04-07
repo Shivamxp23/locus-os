@@ -7,8 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const LOCUS_SKILL_DIR = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  "../../../skills/locus",
+  process.cwd(),
+  "skills/locus",
 );
 
 export function validateLocusSkillPresent(): void {
