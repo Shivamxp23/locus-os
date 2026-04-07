@@ -41,12 +41,8 @@ services:
       - ../.env
     environment:
       NODE_ENV: production
-      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-${TELEGRAM_BOT_TOKEN:-}}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_TOKEN:-${TELEGRAM_BOT_TOKEN:-}}
-      TELEGRAM_OWNER_ID: ${TELEGRAM_OWNER_ID:-}
       LOCUS_API_URL: http://locus-api:3000
-      LOCUS_SERVICE_TOKEN: ${LOCUS_SERVICE_TOKEN:-}
-      OPENCLAW_PLUGINS: ${OPENCLAW_PLUGINS:-telegram}
+      OPENCLAW_PLUGINS: telegram
       OLLAMA_BASE_URL: http://locus-ollama:11434
     networks:
       - locus-net
@@ -97,8 +93,8 @@ services:
     container_name: locus-cloudflared
     restart: unless-stopped
     command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    env_file:
+      - ../.env
     depends_on:
       locus-api:
         condition: service_healthy
