@@ -1,0 +1,645 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\soni8\Desktop\everything\University 2.0\Project(s)\5_Locus\Appledore\03-AI-Chats> # From 03-AI-Chats folder:
+PS C:\Users\soni8\Desktop\everything\University 2.0\Project(s)\5_Locus\Appledore\03-AI-Chats> python step10_retranscribe.py   # deletes bad transcripts, retranscribes all 49 WAVs correctly
+============================================================
+STEP 10: RETRANSCRIBE ALL AUDIO (NO language=en constraint)
+Model: whisper-large-v3-turbo
+ffmpeg: True
+============================================================
+
+Found 128 audio/video files in 04-Resources/AI-Chat-Media/
+  Small (≤24MB, direct): 110
+  Large (>24MB, split):  18
+
+[1/128] soni820034_file_00000000d84c71f68af14e8229906a9e-5762ce7b-d976-4c46-ba7a-bbd73c32e962.wav (11KB)
+  → SKIP (good transcript exists)
+
+[2/128] soni820034_file_00000000baf461f6862541c95966291c-88bbe6da-5627-4cf1-9f5d-5d139d8ea66b.wav (15KB)
+  → SKIP (good transcript exists)
+
+[3/128] soni820034_file_0000000094007206b97bd7da5464155c-4b0cac98-618e-46eb-8a84-325c25e724a7.wav (23KB)
+  → SKIP (good transcript exists)
+
+[4/128] soni820034_file_3ce71ed7b854303c08a2dcfd11f75b5c395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-5608f0a9-b286-4e10-b1ca-afffed1ec62c.wav (28KB)
+  → SKIP (good transcript exists)
+
+[5/128] soni820034_file_3c6145e62114303c33644e5acecbbab8395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-84d15f29-6c13-44b9-aa7e-c2359d815125.wav (45KB)
+  → SKIP (good transcript exists)
+
+[6/128] soni820034_file_00000000d6e461f68ce2471347c6e7c2-13a1d3f0-7f90-4a41-9e4f-fe81cedd58fc.wav (58KB)
+  → SKIP (good transcript exists)
+
+[7/128] soni820034_file_9ca463ae207c303c07dc9c469af24ddb395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-a4038e42-7bd3-4c73-a021-7f36bba681e0.wav (68KB)
+  → SKIP (good transcript exists)
+
+[8/128] soni820034_file_000000009a1c61f683eb05e58fc8a2f7-6bad259b-ac5b-4653-bc96-cc4d67dec695.wav (102KB)
+  → SKIP (good transcript exists)
+
+[9/128] soni820034_file_00000000589c71f6ab7f9e65383e2464-8241e280-aa1b-4bf9-8d35-b33577fd65e5.wav (145KB)
+  → SKIP (good transcript exists)
+
+[10/128] soni820034_file_1117a74976dc303c248e3680915c857e395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-a9b4b3d2-8d32-4556-8426-511a74fe8273.wav (150KB)
+  → SKIP (good transcript exists)
+
+[11/128] soni820034_file_00000000b82061f68880ccf99488b743-3e64a83b-9b27-4834-a9e0-3bf06b523de1.wav (154KB)
+  → SKIP (good transcript exists)
+
+[12/128] soni820034_file_3612475621e8303c3c4bacd6e00e81b9395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-ee5ca0c6-38fe-4d18-9e60-e1a2aa9df0f0.wav (175KB)
+  → SKIP (good transcript exists)
+
+[13/128] soni820034_file_1c22a571b128303c0809f3c39e8ab368395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-a321f190-d565-48d1-8dbb-e6124295e88e.wav (283KB)
+  → SKIP (good transcript exists)
+
+[14/128] soni820034_file_00000000e2f87206980bcd19188aa306-a31b41d9-802c-4b58-b416-5ececb1da02c.wav (350KB)
+  → SKIP (good transcript exists)
+
+[15/128] soni820034_file_000000003158723082d5ed086b29cf0e-ce7aa511-f38a-464b-a9e6-9c087f5d48a2.wav (360KB)
+  → SKIP (good transcript exists)
+
+[16/128] soni820034_file_00000000efa061f6946b41f782b302ac-c057c319-cf62-481b-9c08-1f681c3ac3d2.wav (448KB)
+  → SKIP (good transcript exists)
+
+[17/128] soni820034_file_000000009b5c7206b87bce17dec6ba92-0844da4c-9123-4996-ad46-a5d47c1544c5.wav (492KB)
+  → SKIP (good transcript exists)
+
+[18/128] soni820034_file_0000000096687206bff0c02f3e434399-46a24e12-078f-429a-b911-aca6f12bda13.wav (497KB)
+  → SKIP (good transcript exists)
+
+[19/128] soni820034_file_00000000334c61f68e1a17f58926a3a9-024b8760-f909-4e15-ad2e-35bced022671.wav (508KB)
+  → SKIP (good transcript exists)
+
+[20/128] soni820034_file_00000000577071f68fc36525818a026f-9ee44fb3-ca47-4c32-85c3-38aa975406e6.wav (678KB)
+  → SKIP (good transcript exists)
+
+[21/128] soni820034_file_0000000006d87230828c30b30a94f936-9fd70008-64e9-4b30-8847-5c6baafbe870.wav (820KB)
+  → SKIP (good transcript exists)
+
+[22/128] soni820034_file_00000000977861f6bd147a770c5e2809-1e5237b2-ca82-42ca-9e68-c985f08099e5.wav (839KB)
+  → SKIP (good transcript exists)
+
+[23/128] soni820034_file_000000001e0861f6b672cb197f5e7093-3d0a1dc4-4d7d-4426-8b4a-8147b0403737.wav (876KB)
+  → SKIP (good transcript exists)
+
+[24/128] soni820034_file_000000002ed471f69d6d7e8a35e640fe-137add33-23a5-462f-9f6d-fc3399e5c8b4.wav (888KB)
+  → SKIP (good transcript exists)
+
+[25/128] soni820034_file_000000006c9861f6b17ea29bc24b04e8-1005e7fc-87fe-4656-adb7-b348b7b5f06b.wav (902KB)
+  → SKIP (good transcript exists)
+
+[26/128] shivamsonifilms_33e0f64f-916f-4b65-89fb-b18d4f5bb414.mp4 (910KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[27/128] soni820034_file_af2b5a504e48303c035b10d3c6843761395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-2af80d9c-0e4b-4440-860a-6886cb9e0081.wav (961KB)
+  → SKIP (good transcript exists)
+
+[28/128] soni820034_file_0000000043f071f6a3d2ed76fadd5cb0-c789a605-a4e1-452a-93dc-fc006237a734.wav (977KB)
+  → SKIP (good transcript exists)
+
+[29/128] soni820034_file_000000008c7071f6b079083db15daa55-1c6cf420-ed90-41bb-8cc8-32fb1bd75530.wav (989KB)
+  → SKIP (good transcript exists)
+
+[30/128] soni820034_file_00000000a92861f6bc00d97a4d35e912-52bf3608-7415-4314-8c82-962804deab8b.wav (996KB)
+  → SKIP (good transcript exists)
+
+[31/128] shivamsonifilms_defc15d4-0449-4348-b19b-60f659dbffa8.mp4 (1044KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[32/128] shivamsonifilms_99d64db8-6f4e-4a61-a568-f47fe61f6e1e.mp4 (1074KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[33/128] soni820034_file_0000000007bc7230a6e5b0f7ebdb1c65-4b44271c-21ca-4e2f-8a9e-13d9f9c2d191.wav (1195KB)
+  → SKIP (good transcript exists)
+
+[34/128] shivamsonifilms_1f5a1743-6602-44ba-95bd-1995866201b7.mp4 (1259KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[35/128] shivamsonifilms_103983f3-724a-4303-9fe6-ff3fb1f0c431.mp4 (1283KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[36/128] soni820034_file_00000000c7f461f6954777f19e57563a-a6568094-6c50-45db-afa2-c990acd7990e.wav (1361KB)
+  → SKIP (good transcript exists)
+
+[37/128] shivamsonifilms_983ee037-ef1e-456a-a7da-75bd3a6a14dc.mp4 (1362KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[38/128] soni820034_file_8d69104236d8303c21b4fb3a04ad84c4395159a8cb10a5b7ba7dcc96e8dcc9b1df462079404e2aa8e6e8de6740b5d9d4-e484fec5-0442-4e81-8f92-bd1b8cb762b5.wav (1401KB)
+  → SKIP (good transcript exists)
+
+[39/128] shivamsonifilms_82636837-2383-4271-b0b0-532fc60f1581.mp4 (1441KB)
+  → SKIP (good transcript exists)
+
+[40/128] shivamsonifilms_ed8f468a-63c2-4157-986a-df33a9e8395a.mp4 (1516KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[41/128] shivamsonifilms_184885fc-775c-47cf-bbb9-b337f28f5247.mp4 (1544KB)
+  → SKIP (good transcript exists)
+
+[42/128] shivamsonifilms_7a68024c-5706-4d84-834f-2f6b7a7b36db.mp4 (1557KB)
+  → SKIP (good transcript exists)
+
+[43/128] shivamsonifilms_87ff31fe-4178-4891-ab96-ee991542aaa4.mp4 (1594KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[44/128] shivamsonifilms_64419284-a449-49cd-982e-9d3b565c3a1f.mp4 (1689KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[45/128] shivamsonifilms_c01e9f75-94e2-4a4e-890d-b3ca07da4cbf.mp4 (1724KB)
+  → SKIP (good transcript exists)
+
+[46/128] shivamsonifilms_c2328ee5-2beb-476c-a694-1f7d4c3173d5.mp4 (1741KB)
+  → SKIP (good transcript exists)
+
+[47/128] shivamsonifilms_fc7dc55b-8f32-46fb-b1d8-252e5577fa09.mp4 (1930KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[48/128] shivamsonifilms_2bbdd05c-012f-409f-bd8e-f4085a3a44b6.mp4 (1941KB)
+  → SKIP (good transcript exists)
+
+[49/128] shivamsonifilms_79452159-99f7-4f33-b041-d7ad0d1eeedd.mp4 (1979KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[50/128] soni820034_file_000000006fec72308f665ec0fe11ce78-8c6ee112-eb36-49ec-aa68-c70fdba28ef0.wav (2095KB)
+  → SKIP (good transcript exists)
+
+[51/128] shivamsonifilms_41582d16-1b0e-4d7d-b31a-25969c1b3eee.mp4 (2118KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[52/128] soni820034_file_00000000c5d461f68e0435ed2f0e5b49-740d9e63-0a8e-47ca-83e3-06d89c900243.wav (2124KB)
+  → SKIP (good transcript exists)
+
+[53/128] shivamsonifilms_2fb1420a-b7e6-43b1-beb8-8ddd9accaf5e.mp4 (2200KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[54/128] shivamsonifilms_1969591a-0cf8-4b51-bfa9-a2b4e38edee9.mp4 (2241KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_1969591a-0cf8-4b51-bfa9-a2b4e38edee9_transcript.md (0.1min transcribed)
+
+[55/128] shivamsonifilms_8c6b13f2-3173-4215-ae80-1dc41811aa58.mp4 (2245KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[56/128] shivamsonifilms_ca2536e6-56ca-4008-9d89-6146cd02d229.mp4 (2253KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_ca2536e6-56ca-4008-9d89-6146cd02d229_transcript.md (0.1min transcribed)
+
+[57/128] shivamsonifilms_0932abd5-e8cc-4f3e-af4f-1fcc41608ca1.mp4 (2274KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[58/128] shivamsonifilms_6be57b2d-c7a8-466d-9ee9-25ea522cdf54.mp4 (2347KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[59/128] shivamsonifilms_c88e1dd3-752d-4efb-b55b-c0985cc1c834.mp4 (2366KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_c88e1dd3-752d-4efb-b55b-c0985cc1c834_transcript.md (0.1min transcribed)
+
+[60/128] shivamsonifilms_e7d1500b-122b-48d6-84c1-9c6404628135.mp4 (2412KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_e7d1500b-122b-48d6-84c1-9c6404628135_transcript.md (0.1min transcribed)
+
+[61/128] shivamsonifilms_23754c20-5b32-4dec-b7ba-a5674e6d9f0e.mp4 (2473KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_23754c20-5b32-4dec-b7ba-a5674e6d9f0e_transcript.md (0.1min transcribed)
+
+[62/128] shivamsonifilms_6601db14-5404-475f-8028-89d0b07032d6.mp4 (2532KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_6601db14-5404-475f-8028-89d0b07032d6_transcript.md (0.1min transcribed)
+
+[63/128] shivamsonifilms_01cdb939-86ee-47ec-be5c-c1c3c10347c8.mp4 (2593KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[64/128] soni820034_file_000000007ebc722f9799d23c7e654533-27633ce3-7bc9-4e3f-a9f2-5346cfeb1701.wav (2638KB)
+  → SKIP (good transcript exists)
+
+[65/128] shivamsonifilms_dd653ff1-6f3b-429c-a62c-c365cf04510f.mp4 (2669KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_dd653ff1-6f3b-429c-a62c-c365cf04510f_transcript.md (0.1min transcribed)
+
+[66/128] soni820034_file_000000004bd0722fa045c4c0127e5852-dcc61ff7-2775-432c-8070-9c220d2f55ee.wav (2693KB)
+  → SKIP (good transcript exists)
+
+[67/128] shivamsonifilms_cefc9317-0b44-49c4-9523-90a9ab691466.mp4 (2863KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[68/128] shivamsonifilms_a5c1b9e4-e87b-424a-99c0-ffd41756848f.mp4 (2938KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_a5c1b9e4-e87b-424a-99c0-ffd41756848f_transcript.md (0.1min transcribed)
+
+[69/128] shivamsonifilms_48b8da68-7e5d-498a-a75d-635e7b10ded4.mp4 (2974KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_48b8da68-7e5d-498a-a75d-635e7b10ded4_transcript.md (0.1min transcribed)
+
+[70/128] shivamsonifilms_26c4d4af-11ea-4b93-b52b-50990ae41207.mp4 (2981KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_26c4d4af-11ea-4b93-b52b-50990ae41207_transcript.md (0.1min transcribed)
+
+[71/128] shivamsonifilms_b5d7a07f-2248-4fa7-934b-9ad9caa3dd7d.mp4 (3071KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_b5d7a07f-2248-4fa7-934b-9ad9caa3dd7d_transcript.md (0.1min transcribed)
+
+[72/128] shivamsonifilms_4519feab-282a-4cde-b9aa-100afc5d97d5.mp4 (3187KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_4519feab-282a-4cde-b9aa-100afc5d97d5_transcript.md (0.1min transcribed)
+
+[73/128] shivamsonifilms_f15ea55f-d411-44e3-b390-17c970812559.mp4 (3456KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_f15ea55f-d411-44e3-b390-17c970812559_transcript.md (0.1min transcribed)
+
+[74/128] shivamsonifilms_b2f1ac12-b8ac-4419-a02f-c2118051a08a.mp4 (3699KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_b2f1ac12-b8ac-4419-a02f-c2118051a08a_transcript.md (0.1min transcribed)
+
+[75/128] shivamsonifilms_c91e306d-e073-479c-8533-6d67dc14cec7.mp4 (3791KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_c91e306d-e073-479c-8533-6d67dc14cec7_transcript.md (0.1min transcribed)
+
+[76/128] shivamsonifilms_a1d393db-15ef-4592-b567-cdf27044cb23.mp4 (3822KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_a1d393db-15ef-4592-b567-cdf27044cb23_transcript.md (0.1min transcribed)
+
+[77/128] shivamsonifilms_f836a305-e996-4681-87eb-f6ec59ac8028.mp4 (3839KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_f836a305-e996-4681-87eb-f6ec59ac8028_transcript.md (0.1min transcribed)
+
+[78/128] shivamsonifilms_0c24c8f8-8315-4f4f-8d95-a498b57a386d.mp4 (4040KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_0c24c8f8-8315-4f4f-8d95-a498b57a386d_transcript.md (0.1min transcribed)
+
+[79/128] shivamsonifilms_447413e8-0ea8-45fd-a3b8-4aac1e107bca.mp4 (4145KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[80/128] shivamsonifilms_af70e2f6-3e25-4f42-84af-f4dce01b2f36.mp4 (4177KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_af70e2f6-3e25-4f42-84af-f4dce01b2f36_transcript.md (0.1min transcribed)
+
+[81/128] shivamsonifilms_39facbcb-0aec-4f58-b24f-40f1c260406f.mp4 (4222KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[82/128] shivamsonifilms_24ff0681-e293-471e-861d-48f466f8c0ee.mp4 (4300KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_24ff0681-e293-471e-861d-48f466f8c0ee_transcript.md (0.1min transcribed)
+
+[83/128] shivamsonifilms_a64aef5d-9ee5-4077-b169-efc476aaee69.mp4 (4508KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_a64aef5d-9ee5-4077-b169-efc476aaee69_transcript.md (0.1min transcribed)
+
+[84/128] shivamsonifilms_acd414ba-fb6b-4402-97a4-a2af78ef9f56.mp4 (4872KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_acd414ba-fb6b-4402-97a4-a2af78ef9f56_transcript.md (0.1min transcribed)
+
+[85/128] shivamsonifilms_852bf49d-dab7-440c-a28f-2da1cadae115.mp4 (4977KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[86/128] shivamsonifilms_92b8272f-4414-4a84-ab93-5f1c3b038163.mp4 (5146KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_92b8272f-4414-4a84-ab93-5f1c3b038163_transcript.md (0.1min transcribed)
+
+[87/128] shivamsonifilms_783f4b98-4818-4b35-9e12-bb97a12bfe17.mp4 (5201KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_783f4b98-4818-4b35-9e12-bb97a12bfe17_transcript.md (0.1min transcribed)
+
+[88/128] shivamsonifilms_12e37898-6326-47d6-9656-eed1b49806ab.mp4 (5508KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_12e37898-6326-47d6-9656-eed1b49806ab_transcript.md (0.1min transcribed)
+
+[89/128] shivamsonifilms_ae8394d5-cc27-4010-a120-95fd8af8f58f.mp4 (5690KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[90/128] shivamsonifilms_cc9e3b93-aec0-4400-af46-c3af76c2b74f.mp4 (5730KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[91/128] shivamsonifilms_6feaca2a-1ef9-44cc-ba27-9fae2d39c066.mp4 (5777KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_6feaca2a-1ef9-44cc-ba27-9fae2d39c066_transcript.md (0.1min transcribed)
+
+[92/128] shivamsonifilms_d6c442f1-8788-465a-9d9a-a86e5287584b.mp4 (5915KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[93/128] shivamsonifilms_c32e2d2b-55e2-4df4-884b-876b96cbb739.mp4 (5921KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_c32e2d2b-55e2-4df4-884b-876b96cbb739_transcript.md (0.1min transcribed)
+
+[94/128] shivamsonifilms_1db980bb-23f1-446a-9501-1de9859d30ca.mp4 (5926KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_1db980bb-23f1-446a-9501-1de9859d30ca_transcript.md (0.1min transcribed)
+
+[95/128] shivamsonifilms_0ca70d36-ffd4-4758-8645-1075a04e53cb.mp4 (5984KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_0ca70d36-ffd4-4758-8645-1075a04e53cb_transcript.md (0.1min transcribed)
+
+[96/128] shivamsonifilms_1a93165c-7978-4e26-b353-befbc099c138.mp4 (6039KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_1a93165c-7978-4e26-b353-befbc099c138_transcript.md (0.1min transcribed)
+
+[97/128] shivamsonifilms_b59c9d9b-566a-4127-b502-1f0fdc28c057.mp4 (6270KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[98/128] shivamsonifilms_c454d136-6c92-4b94-bac0-ae80fd2ab7c1.mp4 (6368KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_c454d136-6c92-4b94-bac0-ae80fd2ab7c1_transcript.md (0.1min transcribed)
+
+[99/128] shivamsonifilms_8b20e2c3-f3c0-412e-ba8a-1f356191f676.mp4 (6445KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_8b20e2c3-f3c0-412e-ba8a-1f356191f676_transcript.md (0.1min transcribed)
+
+[100/128] shivamsonifilms_28f32e47-1d3e-4119-ab85-a977dcf9e39e.mp4 (6463KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_28f32e47-1d3e-4119-ab85-a977dcf9e39e_transcript.md (0.1min transcribed)
+
+[101/128] shivamsonifilms_8dff4bc3-fa15-448f-9b97-e44797fec1f5.mp4 (6482KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_8dff4bc3-fa15-448f-9b97-e44797fec1f5_transcript.md (0.1min transcribed)
+
+[102/128] shivamsonifilms_996737bf-3f4f-4392-9778-7b5c4476093b.mp4 (6812KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_996737bf-3f4f-4392-9778-7b5c4476093b_transcript.md (0.1min transcribed)
+
+[103/128] shivamsonifilms_fcdee8f2-6243-40b0-8139-b69ae4ae9576.mp4 (7030KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_fcdee8f2-6243-40b0-8139-b69ae4ae9576_transcript.md (0.1min transcribed)
+
+[104/128] shivamsonifilms_979d72f3-e2aa-434f-8304-fc065a42c352.mp4 (7084KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_979d72f3-e2aa-434f-8304-fc065a42c352_transcript.md (0.1min transcribed)
+
+[105/128] shivamsonifilms_a30beb5c-c847-48d8-bbbf-e12b835a27ce.mp4 (7335KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_a30beb5c-c847-48d8-bbbf-e12b835a27ce_transcript.md (0.1min transcribed)
+
+[106/128] shivamsonifilms_9100c364-49c4-4f65-9298-fc197eef42dd.mp4 (7404KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[107/128] shivamsonifilms_21ee16ef-9905-4f90-9a06-acc6dc88058f.mp4 (8512KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[108/128] shivamsonifilms_13f01c8a-90f8-49ad-846a-8f4202095482.mp4 (8813KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written: shivamsonifilms_13f01c8a-90f8-49ad-846a-8f4202095482_transcript.md (0.1min transcribed)
+
+[109/128] shivamsonifilms_d7f646f9-9d83-47fc-84f9-ab2bbad79a80.mp4 (11276KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[110/128] shivamsonifilms_4876e15a-9535-440b-b9d1-0ee406990ce0.mp4 (15994KB)
+  → Deleting bad transcript, retranscribing...
+  → Direct transcription...
+  → Written with error: HTTP 400: {"error":{"message":"no audio track found in file","type":"invalid_req
+
+[111/128] soni82003_How a Computer Thinks_ The Journey of a Single .mp4 (27300KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (26MB), splitting into 600s chunks...
+  Chunk 1/1: 27351KB
+  → Written: soni82003_How a Computer Thinks_ The Journey of a Single _transcript.md (0.0min transcribed)
+
+[112/128] shivamsonifilms_7c288a9d-718e-47f9-ae34-6aea8ec07819.mp4 (27923KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (27MB), splitting into 600s chunks...
+  Chunk 1/1: 27917KB
+  → Written: shivamsonifilms_7c288a9d-718e-47f9-ae34-6aea8ec07819_transcript.md (0.0min transcribed)
+
+[113/128] soni82003_The Explainer_ AI Guide.mp4 (44496KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (43MB), splitting into 600s chunks...
+  Chunk 1/1: 44548KB
+  → Written: soni82003_The Explainer_ AI Guide_transcript.md (0.0min transcribed)
+
+[114/128] soni82003_The Internet_s Sorting Office.mp4 (45183KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (44MB), splitting into 600s chunks...
+  Chunk 1/1: 45228KB
+  → Written: soni82003_The Internet_s Sorting Office_transcript.md (0.0min transcribed)
+
+[115/128] soni82003_The Digital Traffic Jam.mp4 (50032KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (48MB), splitting into 600s chunks...
+  Chunk 1/1: 50084KB
+  → Written: soni82003_The Digital Traffic Jam_transcript.md (0.0min transcribed)
+
+[116/128] soni82003_The Hidden Logic of AI Agents.wav (52177KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (50MB), splitting into 600s chunks...
+  Chunk 1/2: 28128KB
+  Chunk 2/2: 24049KB
+  → Written: soni82003_The Hidden Logic of AI Agents_transcript.md (8.6min transcribed)
+
+[117/128] soni82003_Vector Calculus_ Line Integral.wav (54388KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (53MB), splitting into 600s chunks...
+  Chunk 1/2: 28128KB
+  Chunk 2/2: 26260KB
+  → Written: soni82003_Vector Calculus_ Line Integral_transcript.md (0.0min transcribed)
+
+[118/128] soni82003_Aaron Sorkin Teaches Screenwriting.wav (59188KB)
+  → SKIP (good transcript exists)
+
+[119/128] soni82003_Python System Interaction and sys Module.wav (70518KB)
+  → SKIP (good transcript exists)
+
+[120/128] soni82003_From Binary to Brain_ Demystifying How Computer.wav (71400KB)
+  → SKIP (good transcript exists)
+
+[121/128] soni820034_Financial Accounting Fundamentals.wav (77139KB)
+  → SKIP (good transcript exists)
+
+[122/128] soni82003_Financial Accounting.wav (78215KB)
+  → SKIP (good transcript exists)
+
+[123/128] soni820034_Podcast of American Cinematography Manuel.wav (93361KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (91MB), splitting into 600s chunks...
+  Chunk 1/4: 28128KB
+  Chunk 2/4: 28124KB
+  Chunk 3/4: 28124KB
+  Chunk 4/4: 8985KB
+  → Written: soni820034_Podcast of American Cinematography Manuel_transcript.md (3.2min transcribed)
+
+[124/128] soni82003_Algorithm Complexity Master_s Theorem and Sorti.wav (111864KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (109MB), splitting into 600s chunks...
+  Chunk 1/4: 28128KB
+  Chunk 2/4: 28124KB
+  Chunk 3/4: 28124KB
+  Chunk 4/4: 27488KB
+  → Written: soni82003_Algorithm Complexity Master_s Theorem and Sorti_transcript.md (0.0min transcribed)
+
+[125/128] soni82003_Introduction to C Programming and System Interf.wav (121590KB)
+  → SKIP (good transcript exists)
+
+[126/128] soni82003_How AI Navigates and Maps Reality.wav (136916KB)
+  → SKIP (good transcript exists)
+
+[127/128] soni82003_How TCP creates the illusion of reliability.wav (199968KB)
+  → Deleting bad transcript, retranscribing...
+  → Large file (195MB), splitting into 600s chunks...
+  Chunk 1/8: 28128KB
+  Chunk 2/8: 28124KB
+  Chunk 3/8: 28124KB
+  Chunk 4/8: 28124KB
+  Chunk 5/8: 28128KB
+  Chunk 6/8: 28124KB
+  Chunk 7/8: 28124KB
+  Chunk 8/8: 3092KB
+  → Written: soni82003_How TCP creates the illusion of reliability_transcript.md (1.1min transcribed)
+
+[128/128] soni82003_How Concurrency Froze Mars Pathfinder.wav (235061KB)
+  → SKIP (good transcript exists)
+
+--- Linking transcripts to source conversations ---
+  Linked 128 transcripts to source conversations
+
+============================================================
+STEP 10 COMPLETE
+  Transcripts created/updated: 78
+  Bad transcripts will now read correctly (no forced English)
+  Run step11_tag_fix.py next to clean all tags.
+PS C:\Users\soni8\Desktop\everything\University 2.0\Project(s)\5_Locus\Appledore\03-AI-Chats> python step11_tag_fix.py        # rebuilds ALL tags into 3-level hierarchy, removes garbage
+============================================================
+STEP 11: Deep Tag Fix — 3-level hierarchy, no garbage
+============================================================
+Processing 1593 .md files...
+
+Updated: 1507/1593 files
+
+Final tag stats (3814 unique):
+  Faction (level 1):    4 unique tags
+  faction/domain (L2):  1958 unique tags
+  faction/dom/sub (L3): 1801 unique tags
+  Garbage remaining:    0
+  Self-referencing:     0
+
+✅ Open Obsidian → Tag Pane → verify 3-level hierarchy
+PS C:\Users\soni8\Desktop\everything\University 2.0\Project(s)\5_Locus\Appledore\03-AI-Chats> python step12_link_all.py       # links everything to everything across whole vault
+============================================================
+STEP 12: Link all .md files across vault
+============================================================
+Total files: 1593
+  Unique link-worthy tags: 1632
+  Unique projects: 49
+
+Links written: 2577
+Files with backlinks: 429/1593
+Avg per file: 1.6
+PS C:\Users\soni8\Desktop\everything\University 2.0\Project(s)\5_Locus\Appledore\03-AI-Chats>
+
+
+
+NOTE TO SELF --> ENGHANCE THIS PROMPT:
+
+Just check if these have been fulfilled or not and start another chat with the readme file.
+
+-Remove ALL BULLSHIT TAGS
+
+-Replace them with meaningful nested tags
+
+-Fix transcription for all the files so that it transcribes CORRECTLY and FULLY
+
+-Link all the other .md files that are not yet linked for whatever reason that are all mostly from 03 AI Chats
+
+-Add tags and links for all transcripted files
+
+-After all of this edit the README file with the CORRECT, WORKING, FULL PROMPTS AND CODES FOR SECTION FROM STEPS 1-9 AND PROPER GUIDE ON HOW TO DO THIS PROPERLY for any new user.  
+
+-Add default template for all notes that I would ever create (daily note or whatever)
+
+-Update the README accordingly.
+
+-Tell me which step to continue from.
+
+-After implementing LightRAG, ask it to also store conversation history in some database.
+
