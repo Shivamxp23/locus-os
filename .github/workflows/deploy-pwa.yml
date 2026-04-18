@@ -1,0 +1,41 @@
+name: Deploy PWA to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pwa/**'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy PWA
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: pwa
+
+      - name: Build PWA
+        run: npm run build
+        working-directory: pwa
+        env:
+          CI: false
+          REACT_APP_API_URL: https://api.locusapp.online
+          REACT_APP_VAPID_PUBLIC: BPuCjtW1VcTBSK4eRb9zwlPxE0xXFPDXocCK2zKmC5ZXQ5ZGTGCJZWFj1CeAsT7Mz6p3RFcf2ypyC3Ao0ii2Fxg
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./pwa/build --project-name=locus-pwa
