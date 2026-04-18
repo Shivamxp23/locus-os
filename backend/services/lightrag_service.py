@@ -1,6 +1,9 @@
 import httpx
+import os
 
-LIGHTRAG_URL = "http://localhost:9621"
+# Inside Docker, localhost doesn't reach the host — use host-gateway
+# (mapped via extra_hosts in docker-compose.yml)
+LIGHTRAG_URL = os.getenv("LIGHTRAG_URL", "http://host-gateway:9621")
 
 async def query_brain(question: str, mode: str = "hybrid") -> dict:
     """

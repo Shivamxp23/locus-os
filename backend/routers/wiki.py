@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 router = APIRouter()
 
-@router.get("/wiki/query")
-async def wiki_query(q: str = ""):
-    return {"answer": f"Wiki query for '{q}' — knowledge base still compiling.", "query": q}
+# NOTE: /wiki/query endpoint is in vault.py (powered by LightRAG).
+# This router is kept for future wiki-specific endpoints.
