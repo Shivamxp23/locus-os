@@ -392,6 +392,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if a == "vault_search":
         query = action.get("query", text)
+        search_status = "unavailable"
         try:
             async with httpx.AsyncClient(timeout=45) as client:
                 r = await client.get(
@@ -400,7 +401,12 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     headers=api_headers
                 )
             if r.status_code == 200:
-                results = r.json().get("results", [])
+                data = r.json()
+                results = data.get("results", [])
+                
+                # Was there an explicit message from the API (like "Brain indexing")?
+                api_msg = data.get("message")
+                
                 if results and results[0].get("excerpt"):
                     answer = results[0]["excerpt"]
                     # Truncate long vault results for Telegram
@@ -408,13 +414,18 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                         answer = answer[:3000] + "\n\n...(truncated)"
                     await update.message.reply_text(answer)
                     return
+                elif api_msg:
+                    search_status = f"unavailable (API said: {api_msg})"
+                else:
+                    search_status = "empty (no matches found)"
         except Exception as e:
             log.warning(f"Vault search failed: {e}")
+            search_status = f"failed ({e})"
 
-        # Fallback: converse about the topic
+        # Fallback: converse about the topic, but explicitly inform the LLM the search failed
         reply = await converse(
-            f"I tried to search my vault for '{query}' but it's unavailable. "
-            f"Let's discuss this from what you know about me. Original question: {text}",
+            f"[SYSTEM: A vault search for '{query}' was attempted but returning '{search_status}'. "
+            f"Please address the user's question directly based on your memory.]\nUser: {text}",
             user_id
         )
         await update.message.reply_text(reply)
