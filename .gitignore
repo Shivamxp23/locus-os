@@ -235,4 +235,5 @@ coverage/
 *.key
 *.pem
 *.pub
-LOCUS_README_v2.md
+LOCUS_README_v2.mdlightrag-data/
+lightrag.env
