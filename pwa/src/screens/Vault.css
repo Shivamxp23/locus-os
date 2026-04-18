@@ -1,0 +1,131 @@
+.vault-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.vault-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Search */
+.vault-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.vault-search-icon {
+  position: absolute;
+  left: 16px;
+  color: var(--text-tertiary);
+}
+.vault-search-input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--bg-4);
+  border-radius: var(--radius-md);
+  padding: 14px 16px 14px 44px;
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.vault-search-input::placeholder { color: var(--text-tertiary); }
+.vault-search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+/* Actions */
+.vault-actions {
+  display: flex;
+  gap: var(--space-8);
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.vault-actions::-webkit-scrollbar { display: none; }
+.vault-action-chip {
+  font-size: 12px !important;
+  padding: 8px 14px !important;
+  white-space: nowrap;
+}
+
+/* Results */
+.vault-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.vault-result-card {
+  cursor: pointer;
+}
+
+/* Faction grid */
+.vault-faction-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+}
+.vault-faction-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-20);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.vault-faction-card:hover { border-color: inherit; }
+.vault-faction-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+@media (min-width: 1024px) {
+  .vault-faction-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Recent captures */
+.vault-recent-scroll {
+  display: flex;
+  gap: var(--space-12);
+  overflow-x: auto;
+  padding-bottom: var(--space-8);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.vault-recent-scroll::-webkit-scrollbar { display: none; }
+
+.vault-capture-card {
+  min-width: 140px;
+  max-width: 160px;
+  padding: var(--space-12);
+  background: var(--bg-2);
+  border: 1px solid var(--bg-4);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  flex-shrink: 0;
+}
+.vault-capture-empty {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  cursor: pointer;
+  min-height: 80px;
+}
+
+.vault-searching {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}

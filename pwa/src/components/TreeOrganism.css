@@ -1,0 +1,76 @@
+.tree-organism {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.tree-svg {
+  display: block;
+}
+
+.tree-compact .tree-svg {
+  width: 120px;
+  height: 150px;
+}
+
+/* Root pulsing */
+.root-node {
+  animation: root-pulse 3s ease-in-out infinite;
+}
+.root-node:nth-child(2) { animation-delay: 0.5s; }
+.root-node:nth-child(4) { animation-delay: 1s; }
+
+@keyframes root-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Leaf gentle sway */
+.leaf {
+  transform-origin: center;
+  animation: leaf-sway 4s ease-in-out infinite;
+}
+.leaf:nth-child(odd) { animation-delay: -1s; animation-duration: 5s; }
+.leaf:nth-child(even) { animation-delay: -2s; animation-duration: 3.5s; }
+
+@keyframes leaf-sway {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(1px) translateY(-0.5px); }
+  75% { transform: translateX(-1px) translateY(0.5px); }
+}
+
+/* Peak spark travels up trunk */
+.tree-spark {
+  animation: spark-travel 3s ease-in-out infinite;
+}
+@keyframes spark-travel {
+  0%   { cy: 200; opacity: 0; }
+  10%  { opacity: 1; }
+  80%  { cy: 60; opacity: 1; }
+  100% { cy: 40; opacity: 0; }
+}
+
+/* Top leaf shimmer at peak */
+.top-leaf {
+  animation: leaf-sway 4s ease-in-out infinite, top-leaf-shimmer 2s ease-in-out infinite;
+}
+@keyframes top-leaf-shimmer {
+  0%, 100% { filter: none; }
+  50% { filter: brightness(1.5); }
+}
+
+/* State-specific ambient */
+.tree-state-dead .tree-trunk { stroke: var(--bg-4); }
+.tree-state-dead .tree-roots { opacity: 0.15; }
+.tree-state-dead .leaf { display: none; }
+
+.tree-state-struggling .leaf { animation-duration: 8s; }
+
+.tree-state-peak .root-node { animation-duration: 1.5s; }
+.tree-state-peak .leaf { animation-duration: 2.5s; }
+
+.tree-label {
+  font-size: 20px !important;
+  margin-top: var(--space-8);
+}

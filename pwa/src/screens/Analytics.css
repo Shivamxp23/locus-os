@@ -1,0 +1,153 @@
+.analytics-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.analytics-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+
+.analytics-range-selector {
+  display: flex;
+  gap: var(--space-4);
+  background: var(--bg-1);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  border: 1px solid var(--bg-4);
+}
+.analytics-range-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  transition: all var(--duration-fast);
+  cursor: pointer;
+}
+.analytics-range-btn:hover { color: var(--text-secondary); }
+.analytics-range-btn.active {
+  background: var(--gold);
+  color: var(--text-inverse);
+}
+
+/* Summary */
+.analytics-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-12);
+}
+@media (min-width: 1024px) {
+  .analytics-summary {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.analytics-chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+/* DCS bar chart */
+.analytics-dcs-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+}
+.analytics-bar-wrapper {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.analytics-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height var(--duration-standard) var(--ease-out-expo);
+}
+.analytics-chart-labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Faction hours */
+.analytics-faction-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.analytics-faction-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+.analytics-faction-bars {
+  flex: 1;
+  height: 16px;
+  background: var(--bg-3);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.analytics-faction-target {
+  height: 100%;
+  position: relative;
+}
+.analytics-faction-actual {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width var(--duration-standard) var(--ease-out-expo);
+}
+
+/* Heatmap */
+.analytics-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.analytics-heatmap-header,
+.analytics-heatmap-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+.analytics-heatmap-day {
+  flex: 1;
+  text-align: center;
+}
+.analytics-heatmap-cell {
+  flex: 1;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  transition: opacity var(--duration-fast);
+  cursor: pointer;
+}
+.analytics-heatmap-cell:hover { opacity: 1 !important; }
+
+/* Deferrals */
+.analytics-deferrals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.analytics-deferral-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) 0;
+  border-bottom: 1px solid var(--bg-4);
+}
+.analytics-deferral-item:last-child { border-bottom: none; }
+.analytics-deferral-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}

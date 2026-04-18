@@ -1,0 +1,93 @@
+.checkin-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.checkin-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-bottom: var(--space-40);
+}
+
+.checkin-progress-dots {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+.checkin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-4);
+  transition: all var(--duration-fast);
+}
+.checkin-dot.active { background: var(--gold); }
+.checkin-dot.current { box-shadow: 0 0 0 3px var(--gold-glow); }
+
+.checkin-step {
+  animation: page-fade-in var(--duration-standard) var(--ease-out-expo);
+}
+
+.checkin-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.checkin-slider-value {
+  text-align: center;
+  color: var(--gold);
+  margin-bottom: var(--space-8);
+}
+.checkin-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+}
+
+.checkin-nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-top: var(--space-40);
+}
+
+/* DCS Result */
+.checkin-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: var(--space-32);
+  position: relative;
+}
+.checkin-result-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.3;
+  border-radius: var(--radius-2xl);
+  animation: glow-pulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+.checkin-dcs-number {
+  animation: count-up 800ms var(--ease-out-expo);
+  font-size: 72px;
+  z-index: 1;
+}
+.checkin-result-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-12);
+  margin-top: var(--space-32);
+  width: 100%;
+  max-width: 400px;
+  z-index: 1;
+}
+
+/* Night mode dim */
+.checkin-night-mode {
+  filter: brightness(0.85);
+}

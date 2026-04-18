@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Locus",
+  "name": "Locus — Cognitive OS",
+  "description": "Personal Cognitive Operating System",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#080808",
+  "background_color": "#080808",
+  "orientation": "portrait-primary"
 }

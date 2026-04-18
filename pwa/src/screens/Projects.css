@@ -1,0 +1,93 @@
+.projects-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.projects-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.projects-factions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.projects-faction {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--bg-4);
+}
+
+.projects-faction-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-16) var(--space-20);
+  border: none;
+  cursor: pointer;
+  height: 56px;
+  border-bottom: 1px solid transparent;
+}
+
+.projects-faction-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+.projects-faction-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.projects-faction-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.projects-faction-content {
+  padding: var(--space-20);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  animation: page-fade-in var(--duration-standard) var(--ease-out-expo);
+}
+
+.projects-faction-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+.project-card {
+  border-left: 3px solid var(--bg-4);
+  padding: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.project-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.project-difficulty {
+  display: flex;
+  gap: 3px;
+  margin-top: var(--space-4);
+}
+.project-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
