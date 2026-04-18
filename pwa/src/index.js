@@ -12,7 +12,8 @@ root.render(
   </React.StrictMode>
 );
 
-// Register service worker for offline support
-serviceWorkerRegistration.register();
+// Unregister service worker to prevent stale cache issues during active development
+// Re-enable with .register() once the app is stable
+serviceWorkerRegistration.unregister();
 
 reportWebVitals();
