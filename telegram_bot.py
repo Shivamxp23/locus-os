@@ -428,34 +428,52 @@ async def process_text(text: str, user_id: int, update: Update):
     if a == "vault_search":
         query = action.get("query", text)
         search_status = "unavailable"
+        context_text = ""
         try:
             async with httpx.AsyncClient(timeout=45) as client:
                 r = await client.get(
-                    f"{API_URL}/api/v1/vault/search",
-                    params={"q": query},
+                    f"{API_URL}/api/v1/vector/search",
+                    params={"q": query, "limit": 4},
                     headers=api_headers
                 )
             if r.status_code == 200:
                 data = r.json()
                 results = data.get("results", [])
                 
-                # Was there an explicit message from the API (like "Brain indexing")?
-                api_msg = data.get("message")
-                
-                if results and results[0].get("excerpt"):
-                    answer = results[0]["excerpt"]
-                    # Truncate long vault results for Telegram
-                    if len(answer) > 3000:
-                        answer = answer[:3000] + "\n\n...(truncated)"
-                    await update.message.reply_text(answer)
-                    return
-                elif api_msg:
-                    search_status = f"unavailable (API said: {api_msg})"
+                if results:
+                    chunk_texts = []
+                    for res in results:
+                        payload = res.get("payload", {})
+                        # extract text or any available string content
+                        content = payload.get("text", payload.get("content", ""))
+                        if not content and payload:
+                            content = str(payload)
+                        if content:
+                            chunk_texts.append(content)
+                    
+                    if chunk_texts:
+                        context_text = "\n\n---\n\n".join(chunk_texts)
+                        search_status = "found"
+                    else:
+                        search_status = "empty (no usable text in payloads)"
                 else:
                     search_status = "empty (no matches found)"
         except Exception as e:
-            log.warning(f"Vault search failed: {e}")
+            log.warning(f"Vector search failed: {e}")
             search_status = f"failed ({e})"
+
+        if search_status == "found" and context_text:
+            # Enforce max length on context so we don't blow up groq context
+            if len(context_text) > 8000:
+                context_text = context_text[:8000] + "\n...(truncated)"
+            
+            prompt = (
+                f"[SYSTEM: Vault search results for '{query}':\n\n{context_text}\n\n"
+                f"Please address the user's question directly based on these retrieved notes from their Obsidian vault.]\nUser: {text}"
+            )
+            reply = await converse(prompt, user_id)
+            await update.message.reply_text(reply)
+            return
 
         # Fallback: converse about the topic, but explicitly inform the LLM the search failed
         reply = await converse(
