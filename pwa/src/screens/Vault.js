@@ -26,7 +26,26 @@ export default function VaultScreen() {
   const handleSearch = async () => {
     if (!query.trim()) return;
     setSearching(true);
-    const res = await api.searchVault(query);
+    let res = await api.searchVault(query);
+    
+    // Fallback to Vector Search if LightRAG fails or is indexing
+    if (!res || !res.results || res.results.length === 0 || res.message) {
+      console.log("LightRAG search yielded no direct results, trying Vector search...");
+      const vecRes = await api.searchVector(query);
+      if (vecRes && vecRes.results) {
+        // Map Qdrant result structure to match UI expectations
+        res = {
+          results: vecRes.results.map(r => ({
+            title: r.payload?.title || r.payload?.name || 'Vault Note',
+            excerpt: r.payload?.content || 'No preview available',
+            score: r.score
+          }))
+        };
+      } else {
+        res = { results: [] };
+      }
+    }
+    
     setSearching(false);
     if (res) {
       setResults(res);

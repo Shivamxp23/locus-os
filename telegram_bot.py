@@ -485,6 +485,10 @@ async def process_text(text: str, user_id: int, update: Update):
         topic = action.get("topic", text)
         msg_wait = await update.message.reply_text(f"✍️ Drafting content about: {topic}...\n(Pulling cognitive context from Neo4j & Postgres)")
         try:
+            import sys
+            backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+            if backend_path not in sys.path:
+                sys.path.append(backend_path)
             from services.content_engine import generate_draft
             draft = await generate_draft(topic)
             await msg_wait.edit_text(draft)

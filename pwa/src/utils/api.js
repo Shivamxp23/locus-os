@@ -42,6 +42,7 @@ export const api = {
 
   // ── Vault ──
   searchVault: (query) => request(`/vault/search?q=${encodeURIComponent(query)}`),
+  searchVector: (query, limit = 5) => request(`/vector/search?q=${encodeURIComponent(query)}&limit=${limit}`),
   getVaultStats: () => request('/vault/stats'),
   getVaultHealth: () => request('/vault/health'),
 
