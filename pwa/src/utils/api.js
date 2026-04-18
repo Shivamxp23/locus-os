@@ -83,4 +83,8 @@ export const api = {
 
   // ── Auth ──
   getCalendarStatus: () => request('/auth/calendar/status'),
+
+  // ── Push ──
+  getVapidPublicKey: () => request('/push/vapid-public-key'),
+  subscribeToPush: (subscription) => request('/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
 };

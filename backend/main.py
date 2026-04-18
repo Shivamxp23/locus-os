@@ -70,6 +70,9 @@ app.include_router(goals.router,          prefix="/api/v1")
 app.include_router(schedule.router,       prefix="/api/v1")
 app.include_router(factions.router,       prefix="/api/v1")
 app.include_router(analytics_data.router, prefix="/api/v1")
+from routers import push, vector
+app.include_router(push.router,           prefix="/api/v1")
+app.include_router(vector.router,         prefix="/api/v1")
 
 # ── Scheduler ──
 scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")

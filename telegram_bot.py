@@ -17,6 +17,7 @@ OWNER_ID = int(os.getenv("TELEGRAM_OWNER_ID"))
 API_URL = os.getenv("LOCUS_API_URL", "http://localhost:8000")
 SERVICE_TOKEN = os.getenv("LOCUS_SERVICE_TOKEN")
 GROQ_KEY = os.getenv("GROQ_API_KEY")
+GROQ_WHISPER_KEY = os.getenv("GROQ_WHISPER_FOR_OBSIDIAN_API_KEY", GROQ_KEY)
 
 api_headers = {"X-Service-Token": SERVICE_TOKEN}
 
@@ -46,6 +47,7 @@ Actions:
 - create_task: wants to add a task. fields: "title", "faction" (health/leverage/craft/expression), "priority" (1-10), "urgency" (1-10), "difficulty" (1-10)
 - schedule: wants to see today's schedule or what to work on
 - redirect_to_pwa: logging check-ins, mood (these go in PWA)
+- draft_content: wants to draft a post (e.g. linkedin/IG) or blog. field: "topic"
 - converse: everything else — questions, thoughts, venting, greetings
 
 Return ONLY valid JSON. No markdown.
@@ -53,6 +55,7 @@ Return ONLY valid JSON. No markdown.
 Examples:
 "hi" → {"action":"converse"}
 "what did I write about filmmaking" → {"action":"vault_search","query":"filmmaking"}
+"Draft a linkedin post about building locus OS" → {"action":"draft_content","topic":"building locus OS"}
 "why do I keep avoiding Monevo" → {"action":"vault_search","query":"Monevo avoidance patterns"}
 "note: idea about camera angles" → {"action":"capture","text":"idea about camera angles"}
 "log my morning" → {"action":"redirect_to_pwa"}
@@ -380,6 +383,38 @@ async def cmd_clear(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = update.effective_user.id
+    await process_text(text, user_id, update)
+
+@owner_only
+async def handle_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    voice_file = update.message.voice or update.message.audio
+    if not voice_file: return
+    
+    msg = await update.message.reply_text("🎙️ Transcribing...")
+    try:
+        file = await ctx.bot.get_file(voice_file.file_id)
+        audio_bytes = await file.download_as_bytearray()
+        
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://api.groq.com/openai/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {GROQ_WHISPER_KEY}"},
+                files={"file": ("voice.ogg", bytes(audio_bytes), "audio/ogg")},
+                data={"model": "whisper-large-v3-turbo"}
+            )
+        if r.status_code == 200:
+            text = r.json().get("text", "")
+            await msg.edit_text(f"🎙️: {text}")
+            await process_text(text, update.effective_user.id, update)
+        else:
+            log.error(f"Whisper error: {r.text}")
+            await msg.edit_text("🎙️ Transcription failed.")
+    except Exception as e:
+        log.error(f"Voice handling error: {e}")
+        await msg.edit_text("🎙️ Transcription failed.")
+
+async def process_text(text: str, user_id: int, update: Update):
+    user_id = update.effective_user.id
 
     try:
         action = await route(text)
@@ -446,6 +481,17 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         except:
             await update.message.reply_text("Capture failed — API may be down.")
 
+    elif a == "draft_content":
+        topic = action.get("topic", text)
+        msg_wait = await update.message.reply_text(f"✍️ Drafting content about: {topic}...\n(Pulling cognitive context from Neo4j & Postgres)")
+        try:
+            from services.content_engine import generate_draft
+            draft = await generate_draft(topic)
+            await msg_wait.edit_text(draft)
+        except Exception as e:
+            log.error(f"Drafting error: {e}")
+            await msg_wait.edit_text(f"Failed to draft content: {str(e)}")
+
     elif a == "create_task":
         try:
             task_data = {
@@ -505,6 +551,7 @@ def main():
     app.add_handler(CommandHandler("schedule", cmd_schedule))
     app.add_handler(CommandHandler("clear", cmd_clear))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
     log.info("Locus bot v4 started — brain-wired with personality + memory + learning loop.")
     app.run_polling()
 

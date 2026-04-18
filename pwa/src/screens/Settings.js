@@ -59,6 +59,24 @@ export default function SettingsScreen() {
                 <span className="data-s text-secondary">{settings.notificationTimes?.[time] || '—'}</span>
               </div>
             ))}
+            <div className="settings-toggle-row" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+              <span className="body">Push Notifications</span>
+              <button 
+                className="btn-secondary" 
+                style={{ padding: '6px 14px', fontSize: 12 }}
+                onClick={async () => {
+                  try {
+                    const { subscribeToPushNotifications } = await import('../utils/pushUtils');
+                    await subscribeToPushNotifications();
+                    addToast('Push enabled ✓', 'success');
+                  } catch (err) {
+                    addToast('Push failed to enable', 'error');
+                  }
+                }}
+              >
+                Enable
+              </button>
+            </div>
           </div>
         </section>
 

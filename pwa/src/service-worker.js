@@ -69,4 +69,33 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Any other custom service worker logic can go here.
+self.addEventListener("push", (event) => {
+  let data = {};
+  if (event.data) {
+    data = event.data.json();
+  }
+  console.log("Push event received:", data);
+
+  const options = {
+    body: data.body || "Locus OS Notification",
+    icon: "/logo192.png",
+    badge: "/logo192.png",
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: "2"
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Locus", options)
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  console.log("Notification click received.");
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow("https://0bcb3d59.locus-pwa.pages.dev/")
+  );
+});
