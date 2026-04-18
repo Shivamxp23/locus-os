@@ -20,21 +20,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: locus-redis
-    restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    volumes:
-      - redis-data:/data
-    networks:
-      - locus-net
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
   qdrant:
     image: qdrant/qdrant:latest
     container_name: locus-qdrant
@@ -64,17 +49,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: locus-chromadb
-    restart: unless-stopped
-    volumes:
-      - chromadb-data:/chroma/chroma
-    networks:
-      - locus-net
-    ports:
-      - "8001:8000"
 
   fastapi:
     build:
