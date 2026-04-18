@@ -17,10 +17,10 @@ const defaultState = {
     night: null,
   },
   factions: {
-    health:     { targetHours: 17.5, actualHours: 12.6, completionRate: 72 },
-    leverage:   { targetHours: 20,   actualHours: 16.2, completionRate: 81 },
-    craft:      { targetHours: 15,   actualHours: 9.8,  completionRate: 65 },
-    expression: { targetHours: 7.5,  actualHours: 5.1,  completionRate: 68 },
+    health:     { targetHours: 17.5, actualHours: 0, completionRate: 0 },
+    leverage:   { targetHours: 20,   actualHours: 0, completionRate: 0 },
+    craft:      { targetHours: 15,   actualHours: 0, completionRate: 0 },
+    expression: { targetHours: 7.5,  actualHours: 0, completionRate: 0 },
   },
   tasks: [],
   settings: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, MagnifyingGlass, Timer, Plus } from '@phosphor-icons/react';
 import { useApp } from '../context/AppContext';
+import { api } from '../utils/api';
 import TreeOrganism from '../components/TreeOrganism';
 import {
   getGreeting, formatDate, getModeColor, getModeBgColor,
@@ -13,17 +14,30 @@ const FACTIONS = ['health', 'leverage', 'craft', 'expression'];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { dcs, mode, checkins, factions, user, tasks } = useApp();
+  const { dcs, mode, checkins, user, tasks } = useApp();
   const [compositeScore, setCompositeScore] = useState(5.0);
+  const [factionHealth, setFactionHealth] = useState({});
   const dcsRef = useRef(null);
 
-  // Calculate composite score from factions + DCS
+  // Fetch real faction health from API
   useEffect(() => {
-    const avgCompletion = FACTIONS.reduce((sum, f) => sum + (factions[f]?.completionRate || 0), 0) / 4;
+    async function fetchFactions() {
+      const res = await api.getFactionHealth();
+      if (res?.factions) {
+        setFactionHealth(res.factions);
+      }
+    }
+    fetchFactions();
+  }, []);
+
+  // Calculate composite score from real faction data + DCS
+  useEffect(() => {
+    const rates = FACTIONS.map(f => factionHealth[f]?.completion_rate || 0);
+    const avgCompletion = rates.reduce((a, b) => a + b, 0) / 4;
     const avgDcs = dcs || 5.0;
     const score = ((avgCompletion / 100) * 0.35 + (avgDcs / 10) * 0.30 + 0.6 * 0.20 + 0.5 * 0.15) * 10;
     setCompositeScore(Math.min(10, Math.max(0, score)));
-  }, [factions, dcs]);
+  }, [factionHealth, dcs]);
 
   // Animate DCS number
   useEffect(() => {
@@ -115,15 +129,17 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Faction Health */}
+        {/* Faction Health — REAL DATA */}
         <section className="dash-factions">
           <h3 className="heading-3 text-tertiary" style={{ marginBottom: 'var(--space-16)' }}>
             FACTION HEALTH
           </h3>
           <div className="dash-factions-list">
             {FACTIONS.map(f => {
-              const faction = factions[f];
-              const pct = faction?.completionRate || 0;
+              const data = factionHealth[f] || {};
+              const pct = data.completion_rate || 0;
+              const actual = data.actual_hours || 0;
+              const target = data.target_hours || 0;
               return (
                 <div key={f} className="dash-faction-row">
                   <div className="dash-faction-label">
@@ -137,13 +153,13 @@ export default function Dashboard() {
                     <div
                       className="progress-bar-fill"
                       style={{
-                        width: `${pct}%`,
+                        width: `${Math.min(100, target > 0 ? (actual / target) * 100 : 0)}%`,
                         background: getFactionColor(f),
                       }}
                     />
                   </div>
                   <span className="data-s text-secondary" style={{ minWidth: 80, textAlign: 'right' }}>
-                    {pct}% · {faction?.actualHours || 0}/{faction?.targetHours || 0}h
+                    {pct}% · {actual}/{target}h
                   </span>
                 </div>
               );
