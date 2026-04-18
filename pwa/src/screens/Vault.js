@@ -8,7 +8,7 @@ import './Vault.css';
 const FACTIONS = ['health', 'leverage', 'craft', 'expression'];
 
 export default function VaultScreen() {
-  const { addToast } = useApp();
+  useApp();
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState(null);

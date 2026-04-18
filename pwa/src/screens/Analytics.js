@@ -7,7 +7,7 @@ const TIME_RANGES = ['7D', '30D', '3M', 'All'];
 const FACTIONS = ['health', 'leverage', 'craft', 'expression'];
 
 export default function AnalyticsScreen() {
-  const { dcs, factions } = useApp();
+  const { factions } = useApp();
   const [range, setRange] = useState('30D');
 
   // Demo data for charts
@@ -89,7 +89,6 @@ export default function AnalyticsScreen() {
           <div className="analytics-faction-chart">
             {FACTIONS.map(f => {
               const data = factions[f];
-              const targetPct = 100;
               const actualPct = data ? (data.actualHours / data.targetHours) * 100 : 0;
               return (
                 <div key={f} className="analytics-faction-row">

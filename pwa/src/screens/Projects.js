@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CaretDown, CaretUp, Warning } from '@phosphor-icons/react';
+import { CaretDown, CaretUp } from '@phosphor-icons/react';
 import {
   getFactionColor, getFactionDimColor, getFactionLabel,
 } from '../utils/helpers';

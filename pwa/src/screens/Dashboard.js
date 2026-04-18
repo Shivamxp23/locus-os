@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import TreeOrganism from '../components/TreeOrganism';
 import {
   getGreeting, formatDate, getModeColor, getModeBgColor,
-  getModeLabel, getFactionColor, getFactionDimColor, getFactionLabel,
+  getModeLabel, getFactionColor, getFactionLabel,
 } from '../utils/helpers';
 import './Dashboard.css';
 

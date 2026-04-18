@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Check, Clock, ArrowRight } from '@phosphor-icons/react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Check, Clock } from '@phosphor-icons/react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import {
@@ -11,7 +11,7 @@ import './Today.css';
 const FACTIONS = ['health', 'leverage', 'craft', 'expression'];
 
 export default function TodayScreen() {
-  const { dcs, mode, addToast, updateState, tasks: stateTasks } = useApp();
+  const { dcs, mode, addToast, updateState } = useApp();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('all');
   const [showNew, setShowNew] = useState(false);
@@ -20,6 +20,7 @@ export default function TodayScreen() {
   // Load tasks
   useEffect(() => {
     loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTasks = async () => {
