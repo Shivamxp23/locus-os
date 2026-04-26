@@ -6,9 +6,9 @@ import hashlib
 log = logging.getLogger("locus-qdrant")
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_KEY   = os.getenv("GROQ_API_KEY")   # Used for embeddings
 COLLECTION  = "locus_vault"
-VECTOR_DIM  = 768   # text-embedding-004 output dimension
+VECTOR_DIM  = 768   # nomic-embed-text-v1.5 output dimension
 
 
 # ── Collection bootstrap ─────────────────────────────────────────────────────
@@ -37,23 +37,23 @@ async def ensure_collection():
 # ── Embedding ────────────────────────────────────────────────────────────────
 
 async def get_embedding(text: str) -> list[float]:
-    """Get 768-dim embedding via Gemini text-embedding-004."""
-    if not GEMINI_KEY:
-        log.warning("GEMINI_API_KEY missing — embedding unavailable.")
+    """Get 768-dim embedding via Groq nomic-embed-text-v1.5."""
+    if not GROQ_KEY:
+        log.warning("GROQ_API_KEY missing — embedding unavailable.")
         return []
 
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/"
-        f"models/text-embedding-004:embedContent?key={GEMINI_KEY}"
-    )
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.post(url, json={
-                "model": "models/text-embedding-004",
-                "content": {"parts": [{"text": text[:8000]}]}   # safety cap
-            })
+            r = await client.post(
+                "https://api.groq.com/openai/v1/embeddings",
+                headers={"Authorization": f"Bearer {GROQ_KEY}"},
+                json={
+                    "model": "nomic-embed-text-v1_5",
+                    "input": text[:8000]
+                }
+            )
             r.raise_for_status()
-            return r.json()["embedding"]["values"]
+            return r.json()["data"][0]["embedding"]
     except Exception as e:
         log.error(f"Embedding failed: {e}")
         return []
