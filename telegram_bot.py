@@ -9,11 +9,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("locus-bot")
 
-TOKEN          = os.getenv("TELEGRAM_TOKEN")
-OWNER_ID       = int(os.getenv("TELEGRAM_OWNER_ID"))
-API_URL        = os.getenv("LOCUS_API_URL", "http://localhost:8000")
-SERVICE_TOKEN  = os.getenv("LOCUS_SERVICE_TOKEN")
-GROQ_KEY       = os.getenv("GROQ_API_KEY")
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+OWNER_ID = int(os.getenv("TELEGRAM_OWNER_ID"))
+API_URL = os.getenv("LOCUS_API_URL", "http://localhost:8000")
+SERVICE_TOKEN = os.getenv("LOCUS_SERVICE_TOKEN")
+GROQ_KEY = os.getenv("GROQ_API_KEY")
 GROQ_WHISPER_KEY = os.getenv("GROQ_WHISPER_FOR_OBSIDIAN_API_KEY", GROQ_KEY)
 
 api_headers = {"X-Service-Token": SERVICE_TOKEN}
