@@ -1,17 +1,39 @@
 # /opt/locus/backend/services/vault_jobs.py
-# Real implementations — replaces the empty stubs
+# Real implementations — nightly/weekly brain jobs
 
 import os
 import logging
 import json
 import asyncpg
+import httpx
 from datetime import datetime, date
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+TELEGRAM_OWNER_ID = os.getenv("TELEGRAM_OWNER_ID", "")
 VAULT_PATH = "/vault"
+
+
+async def _send_telegram(message: str):
+    """Send a Telegram DM to the owner."""
+    if not TELEGRAM_TOKEN or not TELEGRAM_OWNER_ID:
+        log.warning("Telegram credentials not set — cannot send alert")
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                json={
+                    "chat_id": TELEGRAM_OWNER_ID,
+                    "text": message,
+                    "parse_mode": "Markdown",
+                }
+            )
+    except Exception as e:
+        log.warning(f"Telegram alert send failed: {e}")
 
 
 async def nightly_diff():
@@ -229,7 +251,7 @@ Return ONLY JSON."""
 
 async def exhaustion_check():
     """
-    Check for 3+ consecutive days of DCS < 4 → send alert.
+    Check for 3+ consecutive days of DCS < 4 → send Telegram alert.
     Runs at 3 AM daily.
     """
     log.info("=== Exhaustion Check ===")
@@ -248,12 +270,22 @@ async def exhaustion_check():
 
             low_days = sum(1 for r in rows if r['dcs'] and float(r['dcs']) < 4.0)
             if low_days >= 3:
+                dcs_vals = [f"{r['date'].strftime('%a')}: {r['dcs']}" for r in rows[:low_days]]
                 log.warning(f"EXHAUSTION ALERT: {low_days} consecutive low-DCS days!")
-                # Write behavioral event for tracking
+
                 await conn.execute("""
                     INSERT INTO behavioral_events (user_id, event_type, data)
                     VALUES ('shivam', 'exhaustion_alert', $1)
                 """, json.dumps({"low_days": low_days, "dcs_values": [float(r['dcs']) for r in rows[:low_days]]}))
+
+                # Actually alert you
+                msg = (
+                    f"🔴 *EXHAUSTION ALERT*\n\n"
+                    f"{low_days} consecutive days of DCS < 4:\n"
+                    + "\n".join(f"  • {v}" for v in dcs_vals)
+                    + "\n\nProtect non-negotiables. No productive expectations today."
+                )
+                await _send_telegram(msg)
         finally:
             await conn.close()
 
@@ -263,7 +295,7 @@ async def exhaustion_check():
 
 async def dead_node_detection():
     """
-    Flag outcomes/projects with 0 activity in 60 days.
+    Flag projects with 0 activity in 60 days → Telegram alert.
     Runs Sunday at 6 AM.
     """
     log.info("=== Dead Node Detection ===")
@@ -273,7 +305,6 @@ async def dead_node_detection():
 
         conn = await asyncpg.connect(DATABASE_URL)
         try:
-            # Find projects with no activity in 60 days
             rows = await conn.fetch("""
                 SELECT id, title, faction, status, last_activity_at
                 FROM projects
@@ -293,6 +324,14 @@ async def dead_node_detection():
 
             if rows:
                 log.info(f"Dead node detection: found {len(rows)} stale projects")
+                faction_emoji = {"health": "🟢", "leverage": "🔵", "craft": "🟠", "expression": "🟣"}
+                lines = [f"🕸️ *Dead Node Alert* — {len(rows)} stale project(s):\n"]
+                for r in rows:
+                    e = faction_emoji.get(r['faction'], '⚪')
+                    since = r['last_activity_at'].strftime('%b %d') if r['last_activity_at'] else 'unknown'
+                    lines.append(f"  {e} *{r['title']}* — no activity since {since}")
+                lines.append("\nDecide: pause, abandon, or re-engage this week.")
+                await _send_telegram("\n".join(lines))
             else:
                 log.info("Dead node detection: all projects active")
 

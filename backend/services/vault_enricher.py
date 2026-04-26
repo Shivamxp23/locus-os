@@ -1,10 +1,11 @@
 # /opt/locus/backend/services/vault_enricher.py
-# Runs nightly + on file change
+# Runs nightly + on-demand.
 # For every new/changed vault file:
-# 1. Reads raw content
-# 2. Calls Groq 70b to extract entities, classify intent, enrich
-# 3. Appends ## ⟨locus⟩ section to same file
-# 4. If Goal/Project/Task detected: writes to PostgreSQL
+#   1. Read raw content
+#   2. Call Groq 70b to extract entities, classify, enrich
+#   3. Append ## ⟨locus⟩ section to the same file
+#   4. Index into Qdrant (semantic search)
+#   5. If Goal/Project/Task detected: write to PostgreSQL
 
 import os
 import asyncio
@@ -15,9 +16,18 @@ from datetime import datetime
 import json
 import re
 
-GROQ_KEY = os.getenv("GROQ_API_KEY")
+GROQ_KEY     = os.getenv("GROQ_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-VAULT_PATH = "/vault"
+VAULT_PATH   = "/vault"
+
+# Scan these folders (relative to VAULT_PATH)
+VAULT_SCAN_DIRS = [
+    "00-Inbox",
+    "01-Areas",
+    "02-Projects",
+    "03-Resources",
+    "04-Archive",
+]
 
 ENRICHMENT_PROMPT = """You are analyzing a personal note from Shivam Soni — a 20-something building a startup, interested in filmmaking, philosophy, and self-optimization.
 
@@ -42,6 +52,7 @@ Read this note and return a JSON object with EXACTLY these fields:
 
 Return ONLY the JSON. No explanation. No markdown fences."""
 
+
 async def call_groq_70b(content: str) -> dict:
     async with httpx.AsyncClient(timeout=60) as client:
         r = await client.post(
@@ -51,7 +62,7 @@ async def call_groq_70b(content: str) -> dict:
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
                     {"role": "system", "content": ENRICHMENT_PROMPT},
-                    {"role": "user", "content": content[:4000]}  # Groq context limit
+                    {"role": "user", "content": content[:4000]}
                 ],
                 "temperature": 0.1,
                 "response_format": {"type": "json_object"}
@@ -60,20 +71,22 @@ async def call_groq_70b(content: str) -> dict:
         r.raise_for_status()
         return json.loads(r.json()["choices"][0]["message"]["content"])
 
+
 async def already_enriched(file_path: Path) -> bool:
     content = file_path.read_text(encoding="utf-8", errors="ignore")
     return "## ⟨locus⟩" in content
 
+
 async def get_raw_content(file_path: Path) -> str:
     content = file_path.read_text(encoding="utf-8", errors="ignore")
-    # Strip any existing locus annotation
     if "## ⟨locus⟩" in content:
         content = content[:content.index("## ⟨locus⟩")].strip()
     return content
 
+
 async def append_enrichment(file_path: Path, raw_content: str, enrichment: dict):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    
+
     annotation = f"""
 
 ---
@@ -90,22 +103,25 @@ async def append_enrichment(file_path: Path, raw_content: str, enrichment: dict)
 
 **Summary:** {enrichment.get('enriched_summary', '')}
 """
-    
+
     if enrichment.get('contradictions'):
         annotation += f"\n**⚠️ Contradiction:** {enrichment['contradictions']}\n"
-    
+
     if enrichment.get('task_if_applicable'):
         t = enrichment['task_if_applicable']
         if isinstance(t, dict):
             annotation += f"\n**→ Task Detected:** {t.get('action', '')} (Est: {t.get('estimated_hours', '?')}h, Priority: {t.get('priority', '?')}/10)\n"
-    
+
     full_content = raw_content + annotation
     file_path.write_text(full_content, encoding="utf-8")
 
+
 async def write_to_postgres_if_task(enrichment: dict, file_path: Path, raw_content: str):
     classification = enrichment.get('classification')
+    if not DATABASE_URL:
+        return
     conn = await asyncpg.connect(DATABASE_URL)
-    
+
     try:
         if classification == 'task' and enrichment.get('task_if_applicable'):
             t = enrichment.get('task_if_applicable', {})
@@ -113,14 +129,14 @@ async def write_to_postgres_if_task(enrichment: dict, file_path: Path, raw_conte
                 faction = enrichment.get('faction', 'craft')
                 if faction not in ('health', 'leverage', 'craft', 'expression'):
                     faction = 'craft'
-                
+
                 await conn.execute("""
                     INSERT INTO tasks (
                         user_id, title, description, faction,
                         priority, urgency, difficulty, estimated_hours, status
                     ) VALUES ('shivam', $1, $2, $3, $4, $5, $6, $7, 'pending')
                     ON CONFLICT DO NOTHING
-                """, 
+                """,
                 t.get('action', file_path.stem)[:200],
                 raw_content[:500],
                 faction,
@@ -130,14 +146,14 @@ async def write_to_postgres_if_task(enrichment: dict, file_path: Path, raw_conte
                 float(t.get('estimated_hours', 1.0))
                 )
                 print(f"  → Task written to DB: {t.get('action', '')[:60]}")
-        
+
         elif classification == 'project' and enrichment.get('project_if_applicable'):
             p = enrichment.get('project_if_applicable', {})
             if isinstance(p, dict) and p.get('title'):
                 faction = enrichment.get('faction', 'craft')
                 if faction not in ('health', 'leverage', 'craft', 'expression'):
                     faction = 'craft'
-                
+
                 await conn.execute("""
                     INSERT INTO projects (user_id, title, description, faction, status)
                     VALUES ('shivam', $1, $2, $3, 'active')
@@ -148,7 +164,7 @@ async def write_to_postgres_if_task(enrichment: dict, file_path: Path, raw_conte
                 faction
                 )
                 print(f"  → Project written to DB: {p.get('title', '')[:60]}")
-        
+
         # Always write behavioral event
         await conn.execute("""
             INSERT INTO behavioral_events (user_id, event_type, data)
@@ -159,51 +175,102 @@ async def write_to_postgres_if_task(enrichment: dict, file_path: Path, raw_conte
             "faction": enrichment.get('faction'),
             "tags": enrichment.get('tags', [])
         })[:1000])
-        
+
     finally:
         await conn.close()
 
-async def enrich_file(file_path: Path):
+
+async def index_to_qdrant(file_path: Path, raw_content: str, enrichment: dict) -> bool:
+    """Index the enriched note into Qdrant for semantic search."""
     try:
-        if await already_enriched(file_path):
-            return False
-        
+        from services.qdrant_service import upsert_document
+
+        # Build a rich text blob: raw content + enriched summary
+        summary = enrichment.get("enriched_summary", "")
+        tags    = " ".join(enrichment.get("tags", []))
+        index_text = f"{raw_content[:2000]}\n\nSummary: {summary}\nTags: {tags}"
+
+        metadata = {
+            "source":         str(file_path),
+            "filename":       file_path.name,
+            "classification": enrichment.get("classification", "unknown"),
+            "faction":        enrichment.get("faction", "unknown"),
+            "tags":           enrichment.get("tags", []),
+            "entities":       enrichment.get("entities", [])[:10],
+            "concepts":       enrichment.get("concepts", [])[:8],
+            "summary":        summary,
+            "type":           "vault_note",
+        }
+
+        ok = await upsert_document(str(file_path), index_text, metadata)
+        if ok:
+            print(f"  → Indexed in Qdrant: {file_path.name}")
+        else:
+            print(f"  → Qdrant index failed: {file_path.name}")
+        return ok
+
+    except Exception as e:
+        print(f"  → Qdrant index error ({file_path.name}): {e}")
+        return False
+
+
+async def enrich_file(file_path: Path) -> bool:
+    try:
         raw_content = await get_raw_content(file_path)
         if len(raw_content.strip()) < 20:
             return False  # Skip nearly empty files
-        
-        print(f"Enriching: {file_path.name}")
+
+        already = await already_enriched(file_path)
+
+        print(f"{'Re-enriching' if already else 'Enriching'}: {file_path.name}")
         enrichment = await call_groq_70b(raw_content)
-        
-        await append_enrichment(file_path, raw_content, enrichment)
-        await write_to_postgres_if_task(enrichment, file_path, raw_content)
-        
+
+        if not already:
+            await append_enrichment(file_path, raw_content, enrichment)
+            await write_to_postgres_if_task(enrichment, file_path, raw_content)
+
+        # Always (re-)index into Qdrant — idempotent upsert
+        await index_to_qdrant(file_path, raw_content, enrichment)
+
         print(f"  → {enrichment.get('classification')} | {enrichment.get('faction')} | {', '.join(enrichment.get('tags', [])[:3])}")
         return True
-        
+
     except Exception as e:
         print(f"  ERROR enriching {file_path.name}: {e}")
         return False
 
-async def run_enrichment():
-    """Main enrichment job — runs nightly or on demand"""
-    vault = Path(VAULT_PATH)
-    
-    # Collect all markdown files from 00-Inbox
-    files = list(vault.glob("00-Inbox/**/*.md")) + \
-            list(vault.glob("00-Inbox/**/*.txt"))
-    
-    print(f"Vault enricher: {len(files)} files found")
+
+async def run_enrichment(vault_path: str = VAULT_PATH) -> int:
+    """Main enrichment job — runs nightly or on demand.
+    Scans all configured vault folders and enriches + indexes each file."""
+    vault = Path(vault_path)
+
+    if not vault.exists():
+        print(f"Vault path '{vault_path}' does not exist — skipping enrichment.")
+        return 0
+
+    files = []
+    for folder in VAULT_SCAN_DIRS:
+        folder_path = vault / folder
+        if folder_path.exists():
+            files += list(folder_path.rglob("*.md"))
+            files += list(folder_path.rglob("*.txt"))
+
+    # Deduplicate (in case of symlinks etc)
+    files = list({str(f): f for f in files}.values())
+
+    print(f"Vault enricher: {len(files)} files found across {VAULT_SCAN_DIRS}")
     enriched = 0
-    
+
     for f in files:
         result = await enrich_file(f)
         if result:
             enriched += 1
-            await asyncio.sleep(1)  # Rate limit: 1 file/sec = well within Groq limits
-    
-    print(f"Vault enricher complete: {enriched}/{len(files)} files enriched")
+            await asyncio.sleep(1)  # Rate limit: 1 file/sec
+
+    print(f"Vault enricher complete: {enriched}/{len(files)} files processed")
     return enriched
+
 
 if __name__ == "__main__":
     asyncio.run(run_enrichment())

@@ -1,20 +1,25 @@
-# /opt/locus/backend/routers/captures.py — REAL implementation
+# /opt/locus/backend/routers/captures.py — REAL implementation + Qdrant indexing
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 import asyncpg
 import os
+import logging
 
 router = APIRouter()
 DATABASE_URL = os.getenv("DATABASE_URL")
+log = logging.getLogger(__name__)
+
 
 async def get_conn():
     return await asyncpg.connect(DATABASE_URL)
 
+
 class Capture(BaseModel):
     text: str
     source: Optional[str] = "pwa"
+
 
 @router.post("/captures")
 async def create_capture(capture: Capture):
@@ -25,15 +30,40 @@ async def create_capture(capture: Capture):
             VALUES ('shivam', $1, $2)
             RETURNING id, created_at
         """, capture.text, capture.source)
-        
+
         await conn.execute("""
             INSERT INTO behavioral_events (user_id, event_type, data)
             VALUES ('shivam', 'capture', $1)
         """, f'{{"text": "{capture.text[:100]}", "source": "{capture.source}"}}')
+
+        capture_id = str(row['id'])
     finally:
         await conn.close()
-    
-    return {"status": "ok", "message": "Captured ✓", "id": str(row['id'])}
+
+    # Index into Qdrant immediately (fire-and-forget)
+    import asyncio
+    asyncio.create_task(_index_capture(capture_id, capture.text, capture.source))
+
+    return {"status": "ok", "message": "Captured ✓", "id": capture_id}
+
+
+async def _index_capture(capture_id: str, text: str, source: str):
+    """Async indexing — doesn't block the response."""
+    try:
+        from services.qdrant_service import upsert_document
+        await upsert_document(
+            source_id=f"capture:{capture_id}",
+            text=text,
+            metadata={
+                "type": "capture",
+                "source": source,
+                "capture_id": capture_id,
+            }
+        )
+        log.info(f"Capture {capture_id} indexed into Qdrant")
+    except Exception as e:
+        log.warning(f"Capture Qdrant index failed (non-fatal): {e}")
+
 
 @router.get("/captures")
 async def get_captures(processed: bool = False, limit: int = 20):

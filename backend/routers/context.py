@@ -1,14 +1,15 @@
 """
-context.py — Two responsibilities:
-  GET  /context/personality     → read from Neo4j (traits, patterns, interests, projects, avoidances)
-  GET  /context/recent_behavior → read from PostgreSQL (DCS scores, avoidances, mood trend)
-  POST /context/learn           → write extracted insights back to Neo4j + behavioral_events
+context.py — Brain context layer.
 
-This is the "learning" loop. Every conversation calls /learn.
-Over time, the graph grows richer and every response improves.
+  GET  /context/personality     → Neo4j (traits, patterns, interests, projects, avoidances)
+  GET  /context/recent_behavior → PostgreSQL (DCS scores, avoidances, mood trend)
+  GET  /context/brain_dump      → COMBINED: Neo4j + Postgres + Qdrant stats + pending tasks
+  POST /context/learn           → write extracted insights back to Neo4j + behavioral_events
 """
 
-import os, logging
+import os
+import logging
+import asyncio
 from fastapi import APIRouter, Header, HTTPException
 from datetime import datetime
 
@@ -33,50 +34,47 @@ def _check(token):
 @router.get("/context/personality")
 async def get_personality(x_service_token: str = Header(None)):
     _check(x_service_token)
+    return await _fetch_neo4j_personality()
 
+
+async def _fetch_neo4j_personality() -> dict:
     result = {
         "traits": [],
         "patterns": [],
         "interests": [],
         "active_projects": [],
-        "avoidances": []
+        "avoidances": [],
     }
-
     try:
         from neo4j import AsyncGraphDatabase
         driver = AsyncGraphDatabase.driver(NEO4J_URL, auth=("neo4j", NEO4J_PASSWORD))
 
         async with driver.session() as s:
 
-            # Personality traits (sorted by confidence)
             r = await s.run(
                 "MATCH (p:Person {name:'Shivam'})-[rel:HAS_TRAIT]->(t:Trait) "
                 "RETURN t.name AS name ORDER BY coalesce(rel.confidence, 1.0) DESC LIMIT 10"
             )
             result["traits"] = [rec["name"] async for rec in r]
 
-            # Behavioural patterns (sorted by reinforcement strength)
             r = await s.run(
                 "MATCH (p:Person {name:'Shivam'})-[:EXHIBITS_PATTERN]->(pat:Pattern) "
-                "RETURN pat.description AS desc ORDER BY coalesce(pat.strength, 1.0) DESC LIMIT 6"
+                "RETURN pat.description AS desc ORDER BY coalesce(pat.strength, 1.0) DESC LIMIT 8"
             )
             result["patterns"] = [rec["desc"] async for rec in r]
 
-            # Interests
             r = await s.run(
                 "MATCH (p:Person {name:'Shivam'})-[:INTERESTED_IN]->(i:Interest) "
                 "RETURN i.name AS name ORDER BY coalesce(i.last_mentioned, datetime()) DESC LIMIT 15"
             )
             result["interests"] = [rec["name"] async for rec in r]
 
-            # Active projects
             r = await s.run(
                 "MATCH (p:Person {name:'Shivam'})-[:WORKING_ON]->(pr:Project {status:'active'}) "
                 "RETURN pr.name AS name"
             )
             result["active_projects"] = [rec["name"] async for rec in r]
 
-            # Known avoidances (by frequency)
             r = await s.run(
                 "MATCH (p:Person {name:'Shivam'})-[:AVOIDS]->(a:Avoidance) "
                 "RETURN a.description AS desc ORDER BY coalesce(a.frequency, 1) DESC LIMIT 5"
@@ -87,7 +85,6 @@ async def get_personality(x_service_token: str = Header(None)):
 
     except Exception as e:
         log.warning(f"Neo4j read failed: {e}")
-        # Return empty — bot handles gracefully
 
     return result
 
@@ -99,19 +96,20 @@ async def get_personality(x_service_token: str = Header(None)):
 @router.get("/context/recent_behavior")
 async def get_recent_behavior(x_service_token: str = Header(None)):
     _check(x_service_token)
+    return await _fetch_postgres_behavior()
 
+
+async def _fetch_postgres_behavior() -> dict:
     result = {
         "recent_dcs": [],
         "last_evening_checkin": None,
         "avoided_recently": [],
-        "mood_trend": None
+        "mood_trend": None,
     }
-
     try:
         import asyncpg
         conn = await asyncpg.connect(DATABASE_URL)
 
-        # Last 7 morning DCS scores
         rows = await conn.fetch("""
             SELECT date, dcs, mode
             FROM daily_logs
@@ -125,7 +123,6 @@ async def get_recent_behavior(x_service_token: str = Header(None)):
             for row in rows if row["dcs"]
         ]
 
-        # Most recent evening check-in
         row = await conn.fetchrow("""
             SELECT did_today, avoided, avoided_reason, tomorrow_priority
             FROM daily_logs
@@ -141,10 +138,9 @@ async def get_recent_behavior(x_service_token: str = Header(None)):
                 if row['avoided_reason']:
                     parts.append(f"Reason: {row['avoided_reason']}")
             if row['tomorrow_priority']:
-                parts.append(f"Tomorrow priority: {row['tomorrow_priority']}")
+                parts.append(f"Tomorrow: {row['tomorrow_priority']}")
             result["last_evening_checkin"] = ". ".join(parts)
 
-        # Recurring avoidances — last 14 days
         rows = await conn.fetch("""
             SELECT avoided, COUNT(*) AS cnt
             FROM daily_logs
@@ -157,7 +153,6 @@ async def get_recent_behavior(x_service_token: str = Header(None)):
         """)
         result["avoided_recently"] = [row["avoided"] for row in rows]
 
-        # Simple mood trend: avg mood last 7 days vs 7 days before that
         rows = await conn.fetch("""
             SELECT
                 AVG(CASE WHEN date >= NOW() - INTERVAL '7 days' THEN mood END) AS recent_avg,
@@ -184,6 +179,116 @@ async def get_recent_behavior(x_service_token: str = Header(None)):
 
 
 # ──────────────────────────────────────────────
+#  BRAIN DUMP  (All sources combined)
+# ──────────────────────────────────────────────
+
+@router.get("/context/brain_dump")
+async def brain_dump(x_service_token: str = Header(None)):
+    """
+    Single endpoint that pulls ALL context in parallel:
+    - Neo4j personality graph
+    - PostgreSQL behavioral patterns + today's state
+    - Qdrant collection stats
+    - Top pending tasks from Postgres
+    """
+    _check(x_service_token)
+
+    # Parallel fetch
+    neo4j_task    = asyncio.create_task(_fetch_neo4j_personality())
+    behavior_task = asyncio.create_task(_fetch_postgres_behavior())
+    qdrant_task   = asyncio.create_task(_fetch_qdrant_stats())
+    tasks_task    = asyncio.create_task(_fetch_pending_tasks())
+    today_task    = asyncio.create_task(_fetch_today_status())
+
+    personality, behavior, qdrant_stats, pending_tasks, today = await asyncio.gather(
+        neo4j_task, behavior_task, qdrant_task, tasks_task, today_task,
+        return_exceptions=True
+    )
+
+    # Handle exceptions gracefully
+    if isinstance(personality, Exception):
+        log.warning(f"brain_dump neo4j failed: {personality}")
+        personality = {"traits": [], "patterns": [], "interests": [], "active_projects": [], "avoidances": []}
+    if isinstance(behavior, Exception):
+        log.warning(f"brain_dump postgres failed: {behavior}")
+        behavior = {"recent_dcs": [], "last_evening_checkin": None, "avoided_recently": [], "mood_trend": None}
+    if isinstance(qdrant_stats, Exception):
+        qdrant_stats = {"points_count": 0, "status": "error"}
+    if isinstance(pending_tasks, Exception):
+        pending_tasks = []
+    if isinstance(today, Exception):
+        today = {"dcs": None, "mode": None, "pending": []}
+
+    return {
+        "personality": personality,
+        "behavior":    behavior,
+        "today":       today,
+        "pending_tasks": pending_tasks,
+        "qdrant":      qdrant_stats,
+        "fetched_at":  datetime.now().isoformat(),
+    }
+
+
+async def _fetch_qdrant_stats() -> dict:
+    try:
+        from services.qdrant_service import collection_stats
+        return await collection_stats()
+    except Exception as e:
+        return {"points_count": 0, "status": f"error: {e}"}
+
+
+async def _fetch_pending_tasks() -> list:
+    try:
+        import asyncpg
+        conn = await asyncpg.connect(DATABASE_URL)
+        try:
+            rows = await conn.fetch("""
+                SELECT id, title, faction, priority, urgency, difficulty, tws,
+                       estimated_hours, deferral_count
+                FROM tasks
+                WHERE user_id = 'shivam' AND status = 'pending'
+                ORDER BY tws DESC
+                LIMIT 10
+            """)
+            return [dict(r) for r in rows]
+        finally:
+            await conn.close()
+    except Exception as e:
+        log.warning(f"Pending tasks fetch failed: {e}")
+        return []
+
+
+async def _fetch_today_status() -> dict:
+    try:
+        import asyncpg
+        from datetime import date
+        conn = await asyncpg.connect(DATABASE_URL)
+        try:
+            today = date.today()
+            rows = await conn.fetch("""
+                SELECT checkin_type, dcs, mode, energy, mood, sleep_quality, stress,
+                       intention, did_today, avoided, tomorrow_priority
+                FROM daily_logs
+                WHERE user_id = 'shivam' AND date = $1
+            """, today)
+            done = [r['checkin_type'] for r in rows]
+            pending = [t for t in ['morning', 'afternoon', 'evening', 'night'] if t not in done]
+            checkins = {r['checkin_type']: dict(r) for r in rows}
+            return {
+                "date": str(today),
+                "checkins": checkins,
+                "pending": pending,
+                "dcs": checkins.get('morning', {}).get('dcs'),
+                "mode": checkins.get('morning', {}).get('mode'),
+            }
+        finally:
+            await conn.close()
+    except Exception as e:
+        log.warning(f"Today status fetch failed: {e}")
+        return {"dcs": None, "mode": None, "pending": []}
+
+
+# ──────────────────────────────────────────────
 #  LEARNING WRITE-BACK  (Neo4j + behavioral_events)
 # ──────────────────────────────────────────────
 
@@ -191,9 +296,9 @@ async def get_recent_behavior(x_service_token: str = Header(None)):
 async def learn(data: dict, x_service_token: str = Header(None)):
     _check(x_service_token)
 
-    extracted = data.get("extracted", {})
+    extracted    = data.get("extracted", {})
     user_message = data.get("user_message", "")
-    bot_reply = data.get("bot_reply", "")
+    bot_reply    = data.get("bot_reply", "")
 
     if not extracted:
         return {"status": "skipped"}
@@ -205,7 +310,7 @@ async def learn(data: dict, x_service_token: str = Header(None)):
         await conn.execute("""
             INSERT INTO ai_interactions
               (user_id, interface, interaction_type, prompt, response, model_used)
-            VALUES ('shivam', 'telegram', 'conversation', $1, $2, 'groq-llama3.1-8b')
+            VALUES ('shivam', 'telegram', 'conversation', $1, $2, 'groq-llama3.3-70b')
         """, user_message, bot_reply)
         await conn.close()
     except Exception as e:
@@ -218,10 +323,8 @@ async def learn(data: dict, x_service_token: str = Header(None)):
 
         async with driver.session() as s:
 
-            # Ensure Person node exists
             await s.run("MERGE (p:Person {name: 'Shivam'})")
 
-            # Topics → Interests
             for topic in extracted.get("topics", []):
                 topic = topic.strip().lower()
                 if len(topic) > 2:
@@ -233,7 +336,6 @@ async def learn(data: dict, x_service_token: str = Header(None)):
                         MERGE (p)-[:INTERESTED_IN]->(i)
                     """, topic=topic)
 
-            # Projects mentioned
             for proj in extracted.get("projects_mentioned", []):
                 proj = proj.strip()
                 if proj:
@@ -246,7 +348,6 @@ async def learn(data: dict, x_service_token: str = Header(None)):
                         MERGE (p)-[:WORKING_ON]->(pr)
                     """, proj=proj)
 
-            # Avoidance pattern
             if extracted.get("avoidance"):
                 await s.run("""
                     MERGE (a:Avoidance {description: $desc})
@@ -257,7 +358,6 @@ async def learn(data: dict, x_service_token: str = Header(None)):
                     MERGE (p)-[:AVOIDS]->(a)
                 """, desc=extracted["avoidance"])
 
-            # Behavioural/personality insight → Pattern node
             if extracted.get("insight"):
                 await s.run("""
                     MERGE (pat:Pattern {description: $desc})
@@ -271,7 +371,6 @@ async def learn(data: dict, x_service_token: str = Header(None)):
                     MERGE (p)-[:EXHIBITS_PATTERN]->(pat)
                 """, desc=extracted["insight"])
 
-            # Personality trait
             if extracted.get("trait"):
                 await s.run("""
                     MERGE (t:Trait {name: $name})

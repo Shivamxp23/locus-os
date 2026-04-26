@@ -1,9 +1,6 @@
-# /opt/locus/telegram_bot.py — v4: Brain-wired with personality + learning loop + memory
+# /opt/locus/telegram_bot.py — v5: Full brain-wired with thinking status + rich context
 
-import os
-import json
-import logging
-import httpx
+import os, json, logging, asyncio, httpx
 from collections import defaultdict
 from datetime import datetime
 from telegram import Update
@@ -12,287 +9,248 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("locus-bot")
 
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-OWNER_ID = int(os.getenv("TELEGRAM_OWNER_ID"))
-API_URL = os.getenv("LOCUS_API_URL", "http://localhost:8000")
-SERVICE_TOKEN = os.getenv("LOCUS_SERVICE_TOKEN")
-GROQ_KEY = os.getenv("GROQ_API_KEY")
+TOKEN          = os.getenv("TELEGRAM_TOKEN")
+OWNER_ID       = int(os.getenv("TELEGRAM_OWNER_ID"))
+API_URL        = os.getenv("LOCUS_API_URL", "http://localhost:8000")
+SERVICE_TOKEN  = os.getenv("LOCUS_SERVICE_TOKEN")
+GROQ_KEY       = os.getenv("GROQ_API_KEY")
 GROQ_WHISPER_KEY = os.getenv("GROQ_WHISPER_FOR_OBSIDIAN_API_KEY", GROQ_KEY)
 
 api_headers = {"X-Service-Token": SERVICE_TOKEN}
 
-# ─── Conversation Memory ────────────────────────────────────
-# Stores last N messages per user session (in-memory, resets on restart)
-MAX_HISTORY = 12
+MAX_HISTORY = 14
 conversation_history: dict[int, list] = defaultdict(list)
 
+def _add_to_history(uid: int, role: str, content: str):
+    conversation_history[uid].append({"role": role, "content": content})
+    if len(conversation_history[uid]) > MAX_HISTORY:
+        conversation_history[uid] = conversation_history[uid][-MAX_HISTORY:]
 
-def _add_to_history(user_id: int, role: str, content: str):
-    conversation_history[user_id].append({"role": role, "content": content})
-    # Keep only last MAX_HISTORY messages
-    if len(conversation_history[user_id]) > MAX_HISTORY:
-        conversation_history[user_id] = conversation_history[user_id][-MAX_HISTORY:]
-
-
-def _get_history(user_id: int) -> list:
-    return list(conversation_history[user_id])
+def _get_history(uid: int) -> list:
+    return list(conversation_history[uid])
 
 
-# ─── Router Prompt ───────────────────────────────────────────
+# ─── Prompts ─────────────────────────────────────────────────────────────────
+
 ROUTER_PROMPT = """Route Shivam's message. Return JSON only.
 
 Actions:
 - vault_search: searching notes/knowledge. field: "query"
-- capture: saving idea/note. field: "text"  
-- create_task: wants to add a task. fields: "title", "faction" (health/leverage/craft/expression), "priority" (1-10), "urgency" (1-10), "difficulty" (1-10)
-- schedule: wants to see today's schedule or what to work on
+- capture: saving idea/note. field: "text"
+- create_task: add a task. fields: "title", "faction" (health/leverage/craft/expression), "priority" (1-10), "urgency" (1-10), "difficulty" (1-10)
+- schedule: see today's schedule or what to work on
 - redirect_to_pwa: logging check-ins, mood (these go in PWA)
-- draft_content: wants to draft a post (e.g. linkedin/IG) or blog. field: "topic"
-- converse: everything else — questions, thoughts, venting, greetings
+- draft_content: draft a post/blog. field: "topic"
+- converse: everything else
 
 Return ONLY valid JSON. No markdown.
 
 Examples:
 "hi" → {"action":"converse"}
 "what did I write about filmmaking" → {"action":"vault_search","query":"filmmaking"}
-"Draft a linkedin post about building locus OS" → {"action":"draft_content","topic":"building locus OS"}
-"why do I keep avoiding Monevo" → {"action":"vault_search","query":"Monevo avoidance patterns"}
 "note: idea about camera angles" → {"action":"capture","text":"idea about camera angles"}
 "log my morning" → {"action":"redirect_to_pwa"}
 "add task: finish API docs" → {"action":"create_task","title":"finish API docs","faction":"leverage","priority":6,"urgency":7,"difficulty":4}
 "what should I work on" → {"action":"schedule"}
-"what's on my plate today" → {"action":"schedule"}
-"I've been feeling stuck lately" → {"action":"converse"}
 """
 
-# ─── Extraction Prompt ───────────────────────────────────────
-EXTRACT_PROMPT = """From this conversation between Shivam and his AI (Locus), extract insights.
-Return JSON with these fields (all optional, return null if not detected):
+EXTRACT_PROMPT = """From this conversation, extract insights. Return JSON only.
 
 {
-  "topics": ["list of topics/subjects discussed"],
-  "projects_mentioned": ["project names mentioned"],
-  "avoidance": "description of avoidance behavior if detected, else null",
-  "insight": "behavioral/personality insight if detected, else null",
-  "trait": "personality trait revealed if detected, else null",
-  "emotional_state": "detected emotional state (frustrated, excited, anxious, etc) or null"
+  "topics": ["list of topics discussed"],
+  "projects_mentioned": ["project names"],
+  "avoidance": "avoidance behavior if detected, else null",
+  "insight": "behavioral insight if detected, else null",
+  "trait": "personality trait revealed, else null",
+  "emotional_state": "emotional state or null"
 }
 
-Return ONLY JSON. No explanation."""
+Return ONLY JSON."""
 
 
-# ─── Core LLM Call ───────────────────────────────────────────
+# ─── LLM ─────────────────────────────────────────────────────────────────────
 
-async def call_groq(messages: list, model: str = "llama-3.3-70b-versatile", temperature: float = 0) -> str:
-    async with httpx.AsyncClient(timeout=45) as client:
+async def call_groq(messages: list, model: str = "llama-3.3-70b-versatile", temperature: float = 0.5) -> str:
+    async with httpx.AsyncClient(timeout=60) as client:
         r = await client.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {GROQ_KEY}"},
-            json={
-                "model": model,
-                "messages": messages,
-                "temperature": temperature
-            }
+            json={"model": model, "messages": messages, "temperature": temperature}
         )
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"]
 
 
-# ─── Brain Context Fetchers ──────────────────────────────────
+# ─── Brain Context ────────────────────────────────────────────────────────────
 
-async def get_personality_context() -> dict:
-    """Fetch personality from Neo4j via FastAPI"""
+async def get_brain_dump() -> dict:
+    """Single call — fetches ALL context in parallel on the server side."""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                f"{API_URL}/api/v1/context/personality",
-                headers=api_headers
-            )
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(f"{API_URL}/api/v1/context/brain_dump", headers=api_headers)
             if r.status_code == 200:
                 return r.json()
     except Exception as e:
-        log.warning(f"Personality context fetch failed: {e}")
-    return {"traits": [], "patterns": [], "interests": [], "active_projects": [], "avoidances": []}
+        log.warning(f"Brain dump failed: {e}")
+    return {
+        "personality": {"traits": [], "patterns": [], "interests": [], "active_projects": [], "avoidances": []},
+        "behavior":    {"recent_dcs": [], "last_evening_checkin": None, "avoided_recently": [], "mood_trend": None},
+        "today":       {"dcs": None, "mode": None, "pending": ["morning","afternoon","evening","night"]},
+        "pending_tasks": [],
+        "qdrant":      {"points_count": 0},
+    }
 
-
-async def get_behavioral_context() -> dict:
-    """Fetch recent behavioral data from PostgreSQL via FastAPI"""
+async def vault_search(query: str, limit: int = 6) -> list:
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             r = await client.get(
-                f"{API_URL}/api/v1/context/recent_behavior",
+                f"{API_URL}/api/v1/vector/search",
+                params={"q": query, "limit": limit},
                 headers=api_headers
             )
             if r.status_code == 200:
-                return r.json()
+                return r.json().get("results", [])
     except Exception as e:
-        log.warning(f"Behavioral context fetch failed: {e}")
-    return {"recent_dcs": [], "last_evening_checkin": None, "avoided_recently": [], "mood_trend": None}
+        log.warning(f"Vault search failed: {e}")
+    return []
 
 
-async def get_today_status() -> dict:
-    """Fetch today's check-in status"""
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                f"{API_URL}/api/v1/checkins/today",
-                headers=api_headers
-            )
-            if r.status_code == 200:
-                return r.json()
-    except Exception as e:
-        log.warning(f"Today status fetch failed: {e}")
-    return {"dcs": None, "mode": None, "pending": ["morning", "afternoon", "evening", "night"]}
+# ─── System Prompt Builder ────────────────────────────────────────────────────
 
+def build_system_prompt(brain: dict, vault_results: list = None) -> str:
+    p   = brain.get("personality", {})
+    b   = brain.get("behavior", {})
+    t   = brain.get("today", {})
+    tasks = brain.get("pending_tasks", [])
+    q   = brain.get("qdrant", {})
 
-def build_system_prompt(personality: dict, behavior: dict, today: dict) -> str:
-    """Build a rich, context-aware system prompt from all brain data"""
-
-    # Base identity
     prompt = """You are Locus — Shivam's personal cognitive operating system and second brain.
-Your personality: Direct. Honest. Data-oriented. Not a cheerleader. Will push back.
-Like a trusted advisor who has read every journal entry he's written.
-Keep responses concise — this is Telegram, not an essay.\n\n"""
+Personality: Direct. Honest. Data-oriented. Not a cheerleader. Will call out avoidance patterns.
+Like a trusted advisor who has read every journal entry, every note, every task.
+This is Telegram — be thorough but readable. Use bullet points, not walls of text.
+Always cite your reasoning. If you spotted a pattern, say so explicitly.\n\n"""
 
-    # Personality traits from Neo4j
-    if personality.get("traits"):
-        prompt += f"**Known personality traits:** {', '.join(personality['traits'])}\n"
-    
-    # Behavioral patterns from Neo4j
-    if personality.get("patterns"):
-        prompt += f"**Behavioral patterns observed:** {'; '.join(personality['patterns'][:4])}\n"
-
-    # Active interests from Neo4j
-    if personality.get("interests"):
-        prompt += f"**Current interests:** {', '.join(personality['interests'][:10])}\n"
-
-    # Active projects from Neo4j
-    if personality.get("active_projects"):
-        prompt += f"**Active projects:** {', '.join(personality['active_projects'])}\n"
-
-    # Known avoidances from Neo4j
-    if personality.get("avoidances"):
-        prompt += f"**Known avoidances (be alert for these):** {'; '.join(personality['avoidances'][:3])}\n"
-
+    if p.get("traits"):
+        prompt += f"**Traits:** {', '.join(p['traits'])}\n"
+    if p.get("patterns"):
+        prompt += f"**Patterns:** {'; '.join(p['patterns'][:5])}\n"
+    if p.get("interests"):
+        prompt += f"**Interests:** {', '.join(p['interests'][:10])}\n"
+    if p.get("active_projects"):
+        prompt += f"**Active projects:** {', '.join(p['active_projects'])}\n"
+    if p.get("avoidances"):
+        prompt += f"**Known avoidances:** {'; '.join(p['avoidances'][:4])}\n"
     prompt += "\n"
 
-    # Today's status
-    dcs = today.get("dcs")
-    mode = today.get("mode")
+    dcs  = t.get("dcs")
+    mode = t.get("mode")
     if dcs:
-        prompt += f"**Today's DCS:** {dcs} — Mode: {mode}\n"
+        prompt += f"**Today — DCS:** {dcs} | **Mode:** {mode}\n"
     else:
         prompt += "**DCS not logged yet today** — morning check-in pending.\n"
 
-    pending = today.get("pending", [])
-    if pending:
-        prompt += f"**Pending check-ins:** {', '.join(pending)}\n"
+    pending_ci = t.get("pending", [])
+    if pending_ci:
+        prompt += f"**Pending check-ins:** {', '.join(pending_ci)}\n"
 
-    # Recent behavior from PostgreSQL
-    if behavior.get("recent_dcs"):
-        prompt += f"**Last 7 days DCS:** {' | '.join(behavior['recent_dcs'][:5])}\n"
+    if b.get("recent_dcs"):
+        prompt += f"**Last 7 days DCS:** {' | '.join(b['recent_dcs'][:5])}\n"
+    if b.get("mood_trend"):
+        prompt += f"**Mood trend:** {b['mood_trend']}\n"
+    if b.get("last_evening_checkin"):
+        prompt += f"**Last evening:** {b['last_evening_checkin'][:300]}\n"
+    if b.get("avoided_recently"):
+        prompt += f"**Avoided recently:** {', '.join(b['avoided_recently'][:3])}\n"
 
-    if behavior.get("mood_trend"):
-        prompt += f"**Mood trend:** {behavior['mood_trend']}\n"
+    if tasks:
+        prompt += f"\n**Top pending tasks ({len(tasks)} total):**\n"
+        faction_e = {"health":"🟢","leverage":"🔵","craft":"🟠","expression":"🟣"}
+        for task in tasks[:5]:
+            e = faction_e.get(task.get("faction",""),"⚪")
+            prompt += f"  {e} {task['title']} (TWS:{task.get('tws','?')}, D:{task.get('difficulty','?')})\n"
 
-    if behavior.get("last_evening_checkin"):
-        prompt += f"**Last evening check-in:** {behavior['last_evening_checkin'][:200]}\n"
+    if vault_results:
+        prompt += f"\n**Vault context ({len(vault_results)} relevant notes):**\n"
+        for i, res in enumerate(vault_results[:4], 1):
+            pl = res.get("payload", {})
+            filename = pl.get("filename", "unknown")
+            summary  = pl.get("summary") or pl.get("text","")[:300]
+            score    = res.get("score", 0)
+            prompt += f"\n[Note {i} — {filename} (relevance: {score:.2f})]:\n{summary}\n"
 
-    if behavior.get("avoided_recently"):
-        prompt += f"**Avoided recently:** {', '.join(behavior['avoided_recently'][:3])}\n"
-
+    prompt += f"\n**Vault indexed notes:** {q.get('points_count', 0)}\n"
     prompt += """
 Rules:
-- If he asks about his notes → search the vault for him.
-- If he wants to log/track → send him to locusapp.online.
-- If you detect avoidance patterns → call them out directly but constructively.
-- Connect dots across his projects and interests.
-- Be genuinely useful. Ask sharp questions. Don't be sycophantic.
+- If vault results are provided above, USE them. Quote specific notes. Name the file.
+- If you spot avoidance, call it out directly but constructively.
+- Connect dots across projects and interests.
+- If DCS is low, adjust your expectations of what to suggest.
+- Be specific, not generic. Vague advice is useless.
+- Direct the user to locusapp.online for check-ins and task logging.
 """
     return prompt
 
 
-# ─── Learning Write-back ─────────────────────────────────────
+# ─── Thinking Status ─────────────────────────────────────────────────────────
 
-async def learn_from_conversation(user_message: str, bot_reply: str):
-    """Extract insights from the conversation and write back to the brain"""
+async def update_thinking(msg, step: str):
+    """Edit the thinking message with current step."""
     try:
-        # Use 8b for fast extraction
-        extraction = await call_groq([
-            {"role": "system", "content": EXTRACT_PROMPT},
-            {"role": "user", "content": f"User: {user_message}\n\nLocus: {bot_reply}"}
-        ], model="llama-3.1-8b-instant", temperature=0)
+        await msg.edit_text(step)
+    except Exception:
+        pass
 
-        try:
-            extracted = json.loads(extraction)
-        except json.JSONDecodeError:
-            return  # Skip if extraction fails
 
-        # POST to /context/learn — writes to Neo4j + PostgreSQL
+# ─── Routing ─────────────────────────────────────────────────────────────────
+
+async def route(text: str) -> dict:
+    content = await call_groq(
+        [{"role": "system", "content": ROUTER_PROMPT}, {"role": "user", "content": text}],
+        model="llama-3.1-8b-instant",
+        temperature=0
+    )
+    try:
+        return json.loads(content)
+    except Exception:
+        return {"action": "converse"}
+
+
+# ─── Core Conversation ───────────────────────────────────────────────────────
+
+async def converse(text: str, uid: int, brain: dict, vault_results: list = None) -> str:
+    system_prompt = build_system_prompt(brain, vault_results)
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(_get_history(uid))
+    messages.append({"role": "user", "content": text})
+
+    reply = await call_groq(messages, model="llama-3.3-70b-versatile", temperature=0.65)
+
+    _add_to_history(uid, "user", text)
+    _add_to_history(uid, "assistant", reply)
+
+    asyncio.create_task(_learn(text, reply))
+    return reply
+
+
+async def _learn(user_msg: str, bot_reply: str):
+    try:
+        extraction = await call_groq(
+            [{"role": "system", "content": EXTRACT_PROMPT},
+             {"role": "user", "content": f"User: {user_msg}\n\nLocus: {bot_reply}"}],
+            model="llama-3.1-8b-instant", temperature=0
+        )
+        extracted = json.loads(extraction)
         async with httpx.AsyncClient(timeout=15) as client:
             await client.post(
                 f"{API_URL}/api/v1/context/learn",
-                json={
-                    "extracted": extracted,
-                    "user_message": user_message[:500],
-                    "bot_reply": bot_reply[:500]
-                },
+                json={"extracted": extracted, "user_message": user_msg[:500], "bot_reply": bot_reply[:500]},
                 headers=api_headers
             )
-        log.info(f"Learning loop: extracted {len(extracted.get('topics', []))} topics, "
-                 f"avoidance={'yes' if extracted.get('avoidance') else 'no'}")
-
     except Exception as e:
         log.warning(f"Learning loop failed (non-fatal): {e}")
 
 
-# ─── Message Routing ─────────────────────────────────────────
-
-async def route(text: str) -> dict:
-    content = await call_groq([
-        {"role": "system", "content": ROUTER_PROMPT},
-        {"role": "user", "content": text}
-    ], model="llama-3.1-8b-instant")  # 8b for routing — fast
-    try:
-        return json.loads(content)
-    except:
-        return {"action": "converse"}
-
-
-# ─── Conversation with Full Brain ────────────────────────────
-
-async def converse(text: str, user_id: int) -> str:
-    """Full brain-wired conversation with personality context + memory"""
-
-    # 1. Fetch all context from the brain (parallel-ish)
-    personality = await get_personality_context()
-    behavior = await get_behavioral_context()
-    today = await get_today_status()
-
-    # 2. Build rich system prompt
-    system_prompt = build_system_prompt(personality, behavior, today)
-
-    # 3. Build message list with history
-    messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(_get_history(user_id))
-    messages.append({"role": "user", "content": text})
-
-    # 4. Call 70b for real conversation
-    reply = await call_groq(messages, model="llama-3.3-70b-versatile", temperature=0.6)
-
-    # 5. Save to history
-    _add_to_history(user_id, "user", text)
-    _add_to_history(user_id, "assistant", reply)
-
-    # 6. Learn from this conversation (fire-and-forget)
-    # Don't await — let it run in background so user gets reply fast
-    import asyncio
-    asyncio.create_task(learn_from_conversation(text, reply))
-
-    return reply
-
-
-# ─── Owner Guard ─────────────────────────────────────────────
+# ─── Owner Guard ──────────────────────────────────────────────────────────────
 
 def owner_only(func):
     async def wrapper(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -302,99 +260,148 @@ def owner_only(func):
     return wrapper
 
 
-# ─── Command Handlers ────────────────────────────────────────
+# ─── Command Handlers ─────────────────────────────────────────────────────────
 
 @owner_only
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Locus v4 online — brain connected.\n\n"
-        "I pull your personality, behavior patterns, and recent check-ins\n"
-        "before every response. Every conversation teaches me more.\n\n"
-        "Talk to me. Search your vault. Capture ideas.\n"
-        "Log check-ins and tasks → locusapp.online"
+        "🧠 *Locus v5 — Brain Online*\n\n"
+        "Every message I receive, I:\n"
+        "1. Pull your personality graph from Neo4j\n"
+        "2. Check behavioral patterns from Postgres\n"
+        "3. Search your Obsidian vault in Qdrant\n"
+        "4. Then think — and respond with all of that context.\n\n"
+        "Commands: /status /brain /schedule /sync /clear\n"
+        "Log check-ins & tasks → locusapp.online",
+        parse_mode="Markdown"
     )
-
 
 @owner_only
 async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Show brain status — what the system knows right now"""
-    personality = await get_personality_context()
-    behavior = await get_behavioral_context()
-    today = await get_today_status()
+    msg = await update.message.reply_text("🧠 Fetching brain status...")
+    brain = await get_brain_dump()
+    p = brain.get("personality", {})
+    t = brain.get("today", {})
+    b = brain.get("behavior", {})
+    q = brain.get("qdrant", {})
 
-    msg = "🧠 **Brain Status**\n\n"
-
-    dcs = today.get("dcs")
-    mode = today.get("mode")
-    if dcs:
-        msg += f"📊 DCS: {dcs} — {mode}\n"
-    else:
-        msg += "📊 DCS: not logged yet\n"
-
-    pending = today.get("pending", [])
+    dcs  = t.get("dcs")
+    mode = t.get("mode")
+    text = "🧠 *Brain Status*\n\n"
+    text += f"📊 DCS: {dcs or 'not logged'}" + (f" — {mode}" if mode else "") + "\n"
+    pending = t.get("pending", [])
     if pending:
-        msg += f"⏳ Pending: {', '.join(pending)}\n"
+        text += f"⏳ Pending check-ins: {', '.join(pending)}\n"
+    text += f"\n🧬 Traits: {len(p.get('traits',[]))}\n"
+    text += f"🔄 Patterns: {len(p.get('patterns',[]))}\n"
+    text += f"💡 Interests: {len(p.get('interests',[]))}\n"
+    text += f"📁 Active projects: {len(p.get('active_projects',[]))}\n"
+    text += f"⚠️ Avoidances tracked: {len(p.get('avoidances',[]))}\n"
+    text += f"📚 Vault notes indexed: {q.get('points_count', 0)}\n"
+    if b.get("mood_trend"):
+        text += f"\n📈 Mood trend: {b['mood_trend']}\n"
+    tasks = brain.get("pending_tasks", [])
+    text += f"✅ Pending tasks: {len(tasks)}\n"
+    text += f"💬 Messages in memory: {len(conversation_history.get(update.effective_user.id, []))}"
+    await msg.edit_text(text, parse_mode="Markdown")
 
-    msg += f"\n🧬 Traits: {len(personality.get('traits', []))}\n"
-    msg += f"🔄 Patterns: {len(personality.get('patterns', []))}\n"
-    msg += f"💡 Interests: {len(personality.get('interests', []))}\n"
-    msg += f"📁 Projects: {len(personality.get('active_projects', []))}\n"
-    msg += f"⚠️ Avoidances: {len(personality.get('avoidances', []))}\n"
+@owner_only
+async def cmd_brain(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Full brain dump — detailed view of everything Locus knows."""
+    msg = await update.message.reply_text("🧠 Fetching full brain dump...")
+    brain = await get_brain_dump()
+    p = brain.get("personality", {})
+    b = brain.get("behavior", {})
+    t = brain.get("today", {})
+    tasks = brain.get("pending_tasks", [])
+    q = brain.get("qdrant", {})
 
-    if behavior.get("mood_trend"):
-        msg += f"\n📈 Mood trend: {behavior['mood_trend']}\n"
+    sections = ["🧠 *Full Brain Dump*\n"]
 
-    if behavior.get("avoided_recently"):
-        msg += f"🚫 Avoided recently: {', '.join(behavior['avoided_recently'][:3])}\n"
+    # Neo4j
+    sections.append("*── Neo4j Personality Graph ──*")
+    sections.append(f"Traits: {', '.join(p.get('traits',[])) or 'none yet'}")
+    sections.append(f"Patterns: {'; '.join(p.get('patterns',[])[:4]) or 'none yet'}")
+    sections.append(f"Projects: {', '.join(p.get('active_projects',[])) or 'none'}")
+    sections.append(f"Avoidances: {'; '.join(p.get('avoidances',[])[:3]) or 'none detected'}")
+    sections.append(f"Interests: {', '.join(p.get('interests',[])[:8]) or 'none'}")
 
-    msg += f"\n💬 Messages in memory: {len(conversation_history.get(update.effective_user.id, []))}"
+    # Postgres
+    sections.append("\n*── Postgres Behavioral Data ──*")
+    sections.append(f"DCS today: {t.get('dcs','not logged')} ({t.get('mode','')})")
+    sections.append(f"Last 7 days: {' | '.join(b.get('recent_dcs',[])[:5]) or 'no data'}")
+    sections.append(f"Mood trend: {b.get('mood_trend','unknown')}")
+    sections.append(f"Last evening: {b.get('last_evening_checkin','none')[:200] if b.get('last_evening_checkin') else 'none'}")
+    sections.append(f"Avoided recently: {', '.join(b.get('avoided_recently',[])) or 'nothing logged'}")
 
-    await update.message.reply_text(msg, parse_mode="Markdown")
+    # Tasks
+    sections.append(f"\n*── Tasks (top {min(5,len(tasks))} of {len(tasks)} pending) ──*")
+    faction_e = {"health":"🟢","leverage":"🔵","craft":"🟠","expression":"🟣"}
+    for task in tasks[:5]:
+        e = faction_e.get(task.get("faction",""),"⚪")
+        sections.append(f"  {e} {task['title']} (TWS:{task.get('tws','?')})")
 
+    # Qdrant
+    sections.append(f"\n*── Qdrant Vault ──*")
+    sections.append(f"Notes indexed: {q.get('points_count', 0)} | Status: {q.get('status','unknown')}")
+
+    await msg.edit_text("\n".join(sections), parse_mode="Markdown")
 
 @owner_only
 async def cmd_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Get today's AI-generated schedule"""
+    msg = await update.message.reply_text("📅 Building schedule...")
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.get(
-                f"{API_URL}/api/v1/schedule/today",
-                headers=api_headers
-            )
+            r = await client.get(f"{API_URL}/api/v1/schedule/today", headers=api_headers)
             if r.status_code == 200:
                 data = r.json()
-                await update.message.reply_text(data.get("formatted", "No schedule generated yet."))
+                await msg.edit_text(data.get("formatted", "No schedule yet."))
                 return
-    except:
+    except Exception:
         pass
-    await update.message.reply_text("Schedule unavailable — use /checkin to log your morning first.")
+    await msg.edit_text("Schedule unavailable — log your morning check-in first.")
 
+@owner_only
+async def cmd_sync(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Trigger vault enrichment + Qdrant indexing."""
+    msg = await update.message.reply_text("🔄 Triggering vault sync...")
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(f"{API_URL}/api/v1/vault/enrich", headers=api_headers)
+            if r.status_code == 200:
+                await msg.edit_text(
+                    "✅ Vault enrichment started in background.\n"
+                    "New notes will be indexed into Qdrant over the next few minutes.\n"
+                    "Check /status in a bit for updated point count."
+                )
+                return
+    except Exception as e:
+        pass
+    await msg.edit_text("⚠️ Sync trigger failed — check if the API is up.")
 
 @owner_only
 async def cmd_clear(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Clear conversation memory"""
     conversation_history[update.effective_user.id] = []
     await update.message.reply_text("Memory cleared. Fresh start.")
 
 
-# ─── Main Message Handler ────────────────────────────────────
+# ─── Main Message Handler ────────────────────────────────────────────────────
 
 @owner_only
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    user_id = update.effective_user.id
-    await process_text(text, user_id, update)
+    await process_text(update.message.text, update.effective_user.id, update)
 
 @owner_only
 async def handle_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     voice_file = update.message.voice or update.message.audio
-    if not voice_file: return
-    
+    if not voice_file:
+        return
+
     msg = await update.message.reply_text("🎙️ Transcribing...")
     try:
         file = await ctx.bot.get_file(voice_file.file_id)
         audio_bytes = await file.download_as_bytearray()
-        
+
         async with httpx.AsyncClient(timeout=60) as client:
             r = await client.post(
                 "https://api.groq.com/openai/v1/audio/transcriptions",
@@ -404,181 +411,167 @@ async def handle_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
         if r.status_code == 200:
             text = r.json().get("text", "")
-            await msg.edit_text(f"🎙️: {text}")
+            await msg.edit_text(f"🎙️ *Transcribed:* {text}", parse_mode="Markdown")
             await process_text(text, update.effective_user.id, update)
         else:
-            log.error(f"Whisper error: {r.text}")
             await msg.edit_text("🎙️ Transcription failed.")
     except Exception as e:
-        log.error(f"Voice handling error: {e}")
+        log.error(f"Voice error: {e}")
         await msg.edit_text("🎙️ Transcription failed.")
 
-async def process_text(text: str, user_id: int, update: Update):
-    user_id = update.effective_user.id
+
+async def process_text(text: str, uid: int, update: Update):
+    # ── Step 1: Show thinking status immediately ──
+    thinking_msg = await update.message.reply_text("🧠 Thinking...")
 
     try:
+        # ── Step 2: Route the message ──
         action = await route(text)
-    except Exception as e:
-        log.error(f"Routing error: {e}")
-        await update.message.reply_text(f"Routing error: {e}")
-        return
+        a = action.get("action", "converse")
 
-    a = action.get("action")
+        # ── Step 3: Gather brain context (always) ──
+        await update_thinking(thinking_msg,
+            "🧠 Thinking...\n├ Pulling personality (Neo4j)...\n├ Checking behavior (Postgres)...\n└ ...")
 
-    if a == "vault_search":
-        query = action.get("query", text)
-        search_status = "unavailable"
-        context_text = ""
-        try:
-            async with httpx.AsyncClient(timeout=45) as client:
-                r = await client.get(
-                    f"{API_URL}/api/v1/vector/search",
-                    params={"q": query, "limit": 4},
-                    headers=api_headers
-                )
-            if r.status_code == 200:
-                data = r.json()
-                results = data.get("results", [])
-                
-                if results:
-                    chunk_texts = []
-                    for res in results:
-                        payload = res.get("payload", {})
-                        # extract text or any available string content
-                        content = payload.get("text", payload.get("content", ""))
-                        if not content and payload:
-                            content = str(payload)
-                        if content:
-                            chunk_texts.append(content)
-                    
-                    if chunk_texts:
-                        context_text = "\n\n---\n\n".join(chunk_texts)
-                        search_status = "found"
-                    else:
-                        search_status = "empty (no usable text in payloads)"
-                else:
-                    search_status = "empty (no matches found)"
-        except Exception as e:
-            log.warning(f"Vector search failed: {e}")
-            search_status = f"failed ({e})"
+        brain = await get_brain_dump()
 
-        if search_status == "found" and context_text:
-            # Enforce max length on context so we don't blow up groq context
-            if len(context_text) > 8000:
-                context_text = context_text[:8000] + "\n...(truncated)"
-            
-            prompt = (
-                f"[SYSTEM: Vault search results for '{query}':\n\n{context_text}\n\n"
-                f"Please address the user's question directly based on these retrieved notes from their Obsidian vault.]\nUser: {text}"
-            )
-            reply = await converse(prompt, user_id)
-            await update.message.reply_text(reply)
-            return
+        p = brain.get("personality", {})
+        qdrant_count = brain.get("qdrant", {}).get("points_count", 0)
 
-        # Fallback: converse about the topic, but explicitly inform the LLM the search failed
-        reply = await converse(
-            f"[SYSTEM: A vault search for '{query}' was attempted but returning '{search_status}'. "
-            f"Please address the user's question directly based on your memory.]\nUser: {text}",
-            user_id
-        )
-        await update.message.reply_text(reply)
+        # ── Step 4: Action-specific handling ──
 
-    elif a == "capture":
-        capture_text = action.get("text", text)
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    f"{API_URL}/api/v1/captures",
-                    json={"text": capture_text, "source": "telegram"},
-                    headers=api_headers
-                )
-            if r.status_code == 200:
-                await update.message.reply_text("Captured ✓")
+        if a == "vault_search":
+            query = action.get("query", text)
+            await update_thinking(thinking_msg,
+                f"🧠 Thinking...\n├ Brain context ✓\n├ Searching vault: '{query}'...\n└ ...")
+
+            results = await vault_search(query, limit=6)
+            count = len(results)
+
+            await update_thinking(thinking_msg,
+                f"🧠 Thinking...\n├ Brain context ✓\n├ Vault search: {count} results ✓\n└ Composing response...")
+
+            if results:
+                reply = await converse(text, uid, brain, vault_results=results)
             else:
-                await update.message.reply_text("Capture failed — API may be down.")
-        except:
-            await update.message.reply_text("Capture failed — API may be down.")
+                # No results — tell the LLM the search was empty
+                augmented = (
+                    f"[SYSTEM: Vault search for '{query}' returned 0 results "
+                    f"({qdrant_count} notes indexed). Answer from memory if possible, "
+                    f"and suggest the user add notes on this topic.]\n\nUser: {text}"
+                )
+                reply = await converse(augmented, uid, brain)
 
-    elif a == "draft_content":
-        topic = action.get("topic", text)
-        msg_wait = await update.message.reply_text(f"✍️ Drafting content about: {topic}...\n(Pulling cognitive context from Neo4j & Postgres)")
-        try:
-            import sys
-            backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
-            if backend_path not in sys.path:
-                sys.path.append(backend_path)
-            from services.content_engine import generate_draft
-            draft = await generate_draft(topic)
-            await msg_wait.edit_text(draft)
-        except Exception as e:
-            log.error(f"Drafting error: {e}")
-            await msg_wait.edit_text(f"Failed to draft content: {str(e)}")
+            await thinking_msg.delete()
+            await update.message.reply_text(reply)
 
-    elif a == "create_task":
-        try:
+        elif a == "capture":
+            capture_text = action.get("text", text)
+            await update_thinking(thinking_msg, "📝 Saving capture...")
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.post(
+                        f"{API_URL}/api/v1/captures",
+                        json={"text": capture_text, "source": "telegram"},
+                        headers=api_headers
+                    )
+                if r.status_code == 200:
+                    await thinking_msg.edit_text(f"✅ Captured & indexed into vault:\n_{capture_text}_", parse_mode="Markdown")
+                else:
+                    await thinking_msg.edit_text("⚠️ Capture failed — API may be down.")
+            except Exception:
+                await thinking_msg.edit_text("⚠️ Capture failed — API may be down.")
+
+        elif a == "create_task":
+            await update_thinking(thinking_msg, "📌 Creating task...")
             task_data = {
-                "title": action.get("title", text[:100]),
-                "faction": action.get("faction", "craft"),
-                "priority": min(10, max(1, action.get("priority", 5))),
-                "urgency": min(10, max(1, action.get("urgency", 5))),
+                "title":      action.get("title", text[:100]),
+                "faction":    action.get("faction", "craft"),
+                "priority":   min(10, max(1, action.get("priority", 5))),
+                "urgency":    min(10, max(1, action.get("urgency", 5))),
                 "difficulty": min(10, max(1, action.get("difficulty", 5))),
             }
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    f"{API_URL}/api/v1/tasks",
-                    json=task_data,
-                    headers=api_headers
-                )
-            if r.status_code == 200:
-                data = r.json()
-                await update.message.reply_text(
-                    f"Task created ✓\n"
-                    f"📌 {task_data['title']}\n"
-                    f"🏴 {task_data['faction']} | TWS: {data.get('tws', '?')}"
-                )
-            else:
-                await update.message.reply_text("Task creation failed.")
-        except Exception as e:
-            await update.message.reply_text(f"Task creation failed: {e}")
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.post(f"{API_URL}/api/v1/tasks", json=task_data, headers=api_headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    faction_e = {"health":"🟢","leverage":"🔵","craft":"🟠","expression":"🟣"}
+                    e = faction_e.get(task_data["faction"],"⚪")
+                    await thinking_msg.edit_text(
+                        f"✅ Task created\n{e} *{task_data['title']}*\n"
+                        f"TWS: {data.get('tws','?')} | {task_data['faction']}",
+                        parse_mode="Markdown"
+                    )
+                else:
+                    await thinking_msg.edit_text("⚠️ Task creation failed.")
+            except Exception as e:
+                await thinking_msg.edit_text(f"⚠️ Task creation error: {e}")
 
-    elif a == "schedule":
+        elif a == "draft_content":
+            topic = action.get("topic", text)
+            await update_thinking(thinking_msg,
+                f"✍️ Drafting content about: *{topic}*\n(Pulling context from Neo4j & Postgres...)",
+            )
+            try:
+                import sys
+                backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+                if backend_path not in sys.path:
+                    sys.path.append(backend_path)
+                from services.content_engine import generate_draft
+                draft = await generate_draft(topic)
+                await thinking_msg.delete()
+                await update.message.reply_text(draft)
+            except Exception as e:
+                await thinking_msg.edit_text(f"⚠️ Draft failed: {e}")
+
+        elif a == "schedule":
+            await update_thinking(thinking_msg, "📅 Building schedule...")
+            try:
+                async with httpx.AsyncClient(timeout=30) as client:
+                    r = await client.get(f"{API_URL}/api/v1/schedule/today", headers=api_headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    await thinking_msg.delete()
+                    await update.message.reply_text(data.get("formatted", "No schedule yet."))
+                else:
+                    await thinking_msg.edit_text("Schedule endpoint unavailable.")
+            except Exception:
+                await thinking_msg.edit_text("Schedule unavailable.")
+
+        elif a == "redirect_to_pwa":
+            await thinking_msg.edit_text("📱 Log that at *locusapp.online*", parse_mode="Markdown")
+
+        else:  # converse
+            await update_thinking(thinking_msg,
+                "🧠 Thinking...\n├ Brain context ✓\n└ Composing response...")
+
+            reply = await converse(text, uid, brain)
+            await thinking_msg.delete()
+            await update.message.reply_text(reply)
+
+    except Exception as e:
+        log.error(f"process_text error: {e}")
         try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                r = await client.get(
-                    f"{API_URL}/api/v1/schedule/today",
-                    headers=api_headers
-                )
-            if r.status_code == 200:
-                data = r.json()
-                await update.message.reply_text(data.get("formatted", "No schedule yet — log your morning check-in first."))
-            else:
-                await update.message.reply_text("Schedule endpoint not available.")
-        except:
-            await update.message.reply_text("Schedule unavailable.")
-
-    elif a == "redirect_to_pwa":
-        await update.message.reply_text("Log that at locusapp.online")
-
-    else:  # converse — full brain-wired conversation
-        reply = await converse(text, user_id)
-        await update.message.reply_text(reply)
+            await thinking_msg.edit_text(f"⚠️ Error: {e}")
+        except Exception:
+            pass
 
 
-# ─── Entry Point ─────────────────────────────────────────────
+# ─── Entry Point ─────────────────────────────────────────────────────────────
 
 def main():
     app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("start",    cmd_start))
+    app.add_handler(CommandHandler("status",   cmd_status))
+    app.add_handler(CommandHandler("brain",    cmd_brain))
     app.add_handler(CommandHandler("schedule", cmd_schedule))
-    app.add_handler(CommandHandler("clear", cmd_clear))
+    app.add_handler(CommandHandler("sync",     cmd_sync))
+    app.add_handler(CommandHandler("clear",    cmd_clear))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
-    log.info("Locus bot v4 started — brain-wired with personality + memory + learning loop.")
+    log.info("Locus bot v5 started — full brain-wired with thinking status.")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
-
-#Change system promot
