@@ -8,7 +8,7 @@ pydantic==2.9.0
 google-auth==2.34.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.147.0
-chromadb-client==1.0.9
+fastembed==0.3.6
 neo4j==5.18.0
 redis==5.0.0
 apscheduler==3.10.4
