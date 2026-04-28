@@ -39,16 +39,30 @@ async def _send_telegram(message: str):
 async def nightly_diff():
     """
     Process new/changed vault files since last run.
-    Calls the vault enricher on any files not yet enriched.
+    1. Run proposition-based indexing (vault_indexer_v2)
+    2. Run enrichment on un-enriched files (vault_enricher)
     Runs at 11:30 PM via APScheduler.
     """
     log.info("=== Nightly Diff: starting ===")
+
+    # Phase 1: Proposition-based indexing into Qdrant
+    try:
+        from services.vault_indexer_v2 import run_incremental_index
+        summary = await run_incremental_index()
+        log.info(
+            f"Nightly indexer: {summary.get('indexed', 0)} files indexed, "
+            f"Qdrant {summary.get('qdrant_before', 0)}→{summary.get('qdrant_after', 0)} points"
+        )
+    except Exception as e:
+        log.error(f"Nightly indexer v2 failed: {e}")
+
+    # Phase 2: Enrichment (annotation with ⟨locus⟩ section)
     try:
         from services.vault_enricher import run_enrichment
         enriched = await run_enrichment()
-        log.info(f"Nightly diff complete: {enriched} files enriched")
+        log.info(f"Nightly enricher: {enriched} files enriched")
     except Exception as e:
-        log.error(f"Nightly diff failed: {e}")
+        log.error(f"Nightly enricher failed: {e}")
 
 
 async def weekly_synthesis():

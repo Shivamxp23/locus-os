@@ -50,19 +50,11 @@ async def create_capture(capture: Capture):
 async def _index_capture(capture_id: str, text: str, source: str):
     """Async indexing — doesn't block the response."""
     try:
-        from services.qdrant_service import upsert_document
-        await upsert_document(
-            source_id=f"capture:{capture_id}",
-            text=text,
-            metadata={
-                "type": "capture",
-                "source": source,
-                "capture_id": capture_id,
-            }
-        )
-        log.info(f"Capture {capture_id} indexed into Qdrant")
+        from services.sync_layer import sync_capture
+        result = await sync_capture(text=text, source=source)
+        log.info(f"Capture {capture_id} synced: {result}")
     except Exception as e:
-        log.warning(f"Capture Qdrant index failed (non-fatal): {e}")
+        log.warning(f"Capture sync failed (non-fatal): {e}")
 
 
 @router.get("/captures")

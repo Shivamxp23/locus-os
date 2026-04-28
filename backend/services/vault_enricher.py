@@ -23,10 +23,11 @@ VAULT_PATH   = "/vault"
 # Scan these folders (relative to VAULT_PATH)
 VAULT_SCAN_DIRS = [
     "00-Inbox",
-    "01-Areas",
+    "01-Journal",
     "02-Projects",
-    "03-Resources",
-    "04-Archive",
+    "03-AI-Chats",
+    "04-Resources",
+    "05-Content",
 ]
 
 ENRICHMENT_PROMPT = """You are analyzing a personal note from Shivam Soni — a 20-something building a startup, interested in filmmaking, philosophy, and self-optimization.

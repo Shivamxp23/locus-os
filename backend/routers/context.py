@@ -393,4 +393,11 @@ async def learn(data: dict, x_service_token: str = Header(None)):
     except Exception as e:
         log.warning(f"Neo4j write-back failed: {e}")
 
+    # ── Sync to Qdrant (embed conversation for retrieval) ──
+    try:
+        from services.sync_layer import sync_learn
+        await sync_learn(extracted, user_message, bot_reply)
+    except Exception as e:
+        log.warning(f"Sync learn→qdrant failed: {e}")
+
     return {"status": "ok"}

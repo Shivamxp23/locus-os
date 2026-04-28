@@ -90,13 +90,29 @@ async def morning_checkin(data: MorningCheckin):
         
     finally:
         await conn.close()
-    
+
+    # Sync DCS to Neo4j (fire-and-forget)
+    import asyncio
+    asyncio.create_task(_sync_morning(result))
+
     return {
         "status": "ok",
         "dcs": result["dcs"],
         "mode": result["mode"],
         "description": result["description"]
     }
+
+
+async def _sync_morning(result):
+    try:
+        from services.sync_layer import sync_checkin
+        await sync_checkin(
+            checkin_type="morning",
+            dcs=result["dcs"],
+            mode=result["mode"],
+        )
+    except Exception:
+        pass
 
 @router.post("/checkins/afternoon")
 async def afternoon_checkin(data: AfternoonCheckin):

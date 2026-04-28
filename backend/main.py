@@ -80,7 +80,7 @@ scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
 @app.on_event("startup")
 async def startup():
-    log.info("Locus API v2.0 starting up...")
+    log.info("Locus API v3.0 starting up — Brain Module Overhaul...")
 
     # ── Nightly Jobs ──
     scheduler.add_job(nightly_diff, "cron", hour=23, minute=30,
@@ -105,8 +105,16 @@ async def startup():
 
 @app.get("/health")
 async def health():
+    sync_status = {}
+    try:
+        from services.sync_layer import sync_health
+        sync_status = await sync_health()
+    except Exception as e:
+        sync_status = {"error": str(e)}
+
     return {
         "status": "ok",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "jobs": [j.id for j in scheduler.get_jobs()],
+        "sync": sync_status,
     }

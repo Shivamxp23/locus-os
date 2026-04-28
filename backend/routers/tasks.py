@@ -56,8 +56,30 @@ async def create_task(task: TaskCreate):
         """, f'{{"title": "{task.title[:80]}", "faction": "{task.faction}", "tws": {tws}}}')
     finally:
         await conn.close()
-    
+
+    # Sync to Neo4j + Qdrant (fire-and-forget)
+    import asyncio
+    asyncio.create_task(_sync_task(task))
+
     return {"status": "ok", "id": str(row['id']), "tws": float(row['tws'])}
+
+
+async def _sync_task(task):
+    """Background sync to Neo4j + Qdrant."""
+    try:
+        from services.sync_layer import sync_task_create
+        await sync_task_create(
+            title=task.title,
+            faction=task.faction,
+            priority=task.priority,
+            urgency=task.urgency,
+            difficulty=task.difficulty,
+            description=task.description,
+            estimated_hours=task.estimated_hours or 1.0,
+            source="api",
+        )
+    except Exception:
+        pass  # Non-fatal, logged inside sync_layer
 
 @router.get("/tasks/today")
 async def tasks_today():

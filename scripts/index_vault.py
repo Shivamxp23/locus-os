@@ -1,94 +1,60 @@
 """
-index_vault.py — Qdrant-native vault indexer.
+index_vault.py — Proposition-based vault indexer (v2).
 Run this once (or after big vault changes) to populate Qdrant.
 
 Usage on VM:
   cd /opt/locus
   export $(grep -v '^#' .env | xargs)
-  python3 scripts/index_vault.py
+  python3 scripts/index_vault.py              # incremental
+  python3 scripts/index_vault.py --force      # full re-index
+  python3 scripts/index_vault.py --max 50     # limit to 50 files
 """
 
-import asyncio, os, sys, hashlib
-from pathlib import Path
+import asyncio, os, sys, argparse
 
 # Allow importing from backend/services
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-VAULT_PATH   = os.getenv("VAULT_PATH", "/vault")
-QDRANT_URL   = os.getenv("QDRANT_URL", "http://localhost:6333")
-GEMINI_KEY   = os.getenv("GEMINI_API_KEY", "")
 
-VAULT_SCAN_DIRS = [
-    "00-Inbox", "01-Areas", "02-Projects", "03-Resources", "04-Archive"
-]
+async def main(force: bool = False, max_files: int = 0):
+    from services.vault_indexer_v2 import run_full_index
+    from services.qdrant_service import collection_stats
 
-
-async def main():
-    from services.qdrant_service import upsert_document, collection_stats
-
-    vault = Path(VAULT_PATH)
-    if not vault.exists():
-        print(f"ERROR: Vault path '{VAULT_PATH}' not found.")
-        print("On the VM, vault should be at /vault (Syncthing mount).")
-        return
-
-    # Collect files
-    files = []
-    for folder in VAULT_SCAN_DIRS:
-        p = vault / folder
-        if p.exists():
-            files += list(p.rglob("*.md")) + list(p.rglob("*.txt"))
-        else:
-            print(f"  [skip] {folder}/ not found")
-
-    files = list({str(f): f for f in files}.values())
-    print(f"\nFound {len(files)} files across vault folders.")
+    print("=" * 60)
+    print("  Locus Vault Indexer v2 — Proposition-based Chunking")
+    print("=" * 60)
 
     stats_before = await collection_stats()
-    print(f"Qdrant before: {stats_before.get('points_count', 0)} points\n")
+    print(f"\nQdrant before: {stats_before.get('points_count', 0)} points")
+    print(f"Force re-index: {force}")
+    print(f"Max files: {max_files or 'all'}")
+    print()
 
-    indexed = 0
-    failed  = 0
+    summary = await run_full_index(force=force, max_files=max_files)
 
-    for i, f in enumerate(files, 1):
-        content = f.read_text(encoding="utf-8", errors="ignore").strip()
-        if len(content) < 20:
-            continue
+    print("\n" + "=" * 60)
+    print("  SUMMARY")
+    print("=" * 60)
+    print(f"  Total files found:   {summary.get('total_files', 0)}")
+    print(f"  Indexed:             {summary.get('indexed', 0)}")
+    print(f"  Skipped (unchanged): {summary.get('skipped', 0)}")
+    print(f"  Failed:              {summary.get('failed', 0)}")
+    print(f"  Total chunks:        {summary.get('total_chunks', 0)}")
+    print(f"  Total upserted:      {summary.get('total_upserted', 0)}")
+    print(f"  Qdrant before:       {summary.get('qdrant_before', 0)}")
+    print(f"  Qdrant after:        {summary.get('qdrant_after', 0)}")
 
-        # Strip existing locus annotations for embedding
-        if "## ⟨locus⟩" in content:
-            clean = content[:content.index("## ⟨locus⟩")].strip()
-        else:
-            clean = content
-
-        # Metadata from filename
-        relative = f.relative_to(vault)
-        folder   = str(relative.parts[0]) if len(relative.parts) > 1 else "root"
-
-        metadata = {
-            "source":   str(f),
-            "filename": f.name,
-            "stem":     f.stem,
-            "folder":   folder,
-            "type":     "vault_note",
-            "text":     clean[:2000],
-        }
-
-        ok = await upsert_document(str(f), clean[:4000], metadata)
-        status = "✓" if ok else "✗"
-        print(f"[{i}/{len(files)}] {status} {f.name[:60]}")
-
-        if ok:
-            indexed += 1
-        else:
-            failed += 1
-
-        await asyncio.sleep(0.3)   # stay within Gemini embedding rate limits
-
-    stats_after = await collection_stats()
-    print(f"\nDone. Indexed: {indexed} | Failed: {failed}")
-    print(f"Qdrant after: {stats_after.get('points_count', 0)} points")
+    errors = summary.get("errors", [])
+    if errors:
+        print(f"\n  Errors ({len(errors)}):")
+        for e in errors[:10]:
+            print(f"    - {e}")
+    print()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Locus Vault Indexer v2")
+    parser.add_argument("--force", action="store_true", help="Force re-index all files")
+    parser.add_argument("--max", type=int, default=0, help="Max files to process (0=all)")
+    args = parser.parse_args()
+    asyncio.run(main(force=args.force, max_files=args.max))
