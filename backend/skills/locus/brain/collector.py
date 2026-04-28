@@ -7,7 +7,7 @@ from datetime import datetime
 log = logging.getLogger("brain.collector")
 DATABASE_URL = os.getenv("DATABASE_URL")
 VAULT_PATH = os.getenv("VAULT_PATH", "/vault")
-VAULT_SCAN_DIRS = os.getenv("VAULT_SCAN_DIRS", "01-Journal,03-AI-Chats,04-Resources,05-Content").split(",")
+VAULT_SCAN_DIRS = os.getenv("VAULT_SCAN_DIRS", "00-Inbox,01-Journal,02-Projects,03-AI-Chats,04-Resources,05-Content").split(",")
 
 async def get_conn():
     return await asyncpg.connect(DATABASE_URL)

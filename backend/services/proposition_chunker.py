@@ -188,14 +188,9 @@ async def _classify_via_ollama(sentence: str) -> Optional[str]:
 
 async def classify_sentence(sentence: str) -> Optional[str]:
     """
-    Classify: try Ollama first (free, local), fallback to Groq.
+    Classify: Use Groq (since Ollama is unreachable).
     Returns the sentence if it's a proposition, None otherwise.
     """
-    # Try Ollama first (local, no API limit)
-    result = await _classify_via_ollama(sentence)
-    if result is not None:
-        return result
-    # Fallback to Groq
     return await _classify_via_groq(sentence)
 
 
