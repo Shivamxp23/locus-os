@@ -130,3 +130,60 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_date ON tasks(scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_behavioral_events_type ON behavioral_events(event_type, created_at);
 CREATE INDEX IF NOT EXISTS idx_captures_processed ON captures(processed, created_at);
+
+-- Vault indexing state tracker
+CREATE TABLE vault_index_state (
+    file_path TEXT PRIMARY KEY,
+    file_hash TEXT NOT NULL,
+    last_indexed_at TIMESTAMPTZ DEFAULT NOW(),
+    chunk_count INT DEFAULT 0
+);
+
+-- Vault chunks metadata
+CREATE TABLE vault_chunks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    file_path TEXT NOT NULL,
+    chunk_index INT NOT NULL,
+    text TEXT NOT NULL,
+    qdrant_point_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Brain error log
+CREATE TABLE brain_errors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subsystem TEXT NOT NULL,
+    file_path TEXT,
+    error_msg TEXT NOT NULL,
+    severity INT CHECK (severity IN (1,2,3)),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Pattern snapshots
+CREATE TABLE pattern_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    snapshot_date DATE NOT NULL,
+    faction_lag_json JSONB,
+    dcs_trend TEXT,
+    exhaustion_risk BOOL DEFAULT FALSE,
+    action_gap_json JSONB,
+    deferral_count INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Weekly reviews
+CREATE TABLE weekly_reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    week_ending DATE NOT NULL,
+    review_json JSONB NOT NULL,
+    obsidian_note_path TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Task deferrals tracker
+CREATE TABLE task_deferrals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id UUID NOT NULL,
+    deferred_at TIMESTAMPTZ DEFAULT NOW(),
+    reason TEXT
+);

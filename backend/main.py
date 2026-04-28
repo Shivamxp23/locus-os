@@ -73,6 +73,8 @@ app.include_router(analytics_data.router, prefix="/api/v1")
 from routers import push, vector
 app.include_router(push.router,           prefix="/api/v1")
 app.include_router(vector.router,         prefix="/api/v1")
+from backend.skills.locus.brain.router import router as brain_router
+app.include_router(brain_router,          prefix="/api/v1")
 
 # ── Scheduler ──
 scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
@@ -99,8 +101,20 @@ async def startup():
     scheduler.add_job(dead_node_detection, "cron", day_of_week="sun", hour=6,
                       id="dead_node_detection", replace_existing=True)
 
+    # ── Brain Module Jobs ──
+    from backend.skills.locus.brain.collector import run_nightly_crawl
+    from backend.skills.locus.brain.pattern_engine import run_weekly as pattern_run_weekly
+    from backend.skills.locus.brain.goal_tracker import run_weekly_review
+    
+    scheduler.add_job(run_nightly_crawl, "cron", hour=2, minute=0,
+                      id="brain_crawl", replace_existing=True)
+    scheduler.add_job(pattern_run_weekly, "cron", day_of_week="sun", hour=23,
+                      id="brain_patterns", replace_existing=True)
+    scheduler.add_job(run_weekly_review, "cron", day_of_week="sun", hour=23, minute=30,
+                      id="brain_weekly_review", replace_existing=True)
+
     scheduler.start()
-    log.info("APScheduler started with 5 jobs")
+    log.info("APScheduler started with all jobs including Brain Module")
 
 
 @app.get("/health")
