@@ -1,76 +1,145 @@
-.tree-organism {
+.node-organism {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-12);
+  justify-content: center;
+  gap: var(--space-16);
+  width: 100%;
 }
 
-.tree-svg {
+.org-svg {
   display: block;
+  background: var(--bg-0);
+  border: 4px solid var(--text-primary);
+  box-shadow: 8px 8px 0 var(--text-primary);
+  background-image: radial-gradient(var(--text-primary) 2px, transparent 2px);
+  background-size: 16px 16px;
+  transition: all var(--duration-fast);
 }
 
-.tree-compact .tree-svg {
+.org-compact .org-svg {
   width: 120px;
-  height: 150px;
+  height: 120px;
+  border: 4px solid var(--text-primary);
+  box-shadow: 6px 6px 0 var(--text-primary);
+  background-size: 8px 8px;
 }
 
-/* Root pulsing */
-.root-node {
-  animation: root-pulse 3s ease-in-out infinite;
+/* Base Nodes and Edges */
+.tree-leaf {
+  transition: all var(--duration-standard) var(--ease-out-expo);
 }
-.root-node:nth-child(2) { animation-delay: 0.5s; }
-.root-node:nth-child(4) { animation-delay: 1s; }
-
-@keyframes root-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+.tree-branch {
+  transition: all var(--duration-standard) var(--ease-out-expo);
 }
 
-/* Leaf gentle sway */
-.leaf {
-  transform-origin: center;
-  animation: leaf-sway 4s ease-in-out infinite;
-}
-.leaf:nth-child(odd) { animation-delay: -1s; animation-duration: 5s; }
-.leaf:nth-child(even) { animation-delay: -2s; animation-duration: 3.5s; }
+/* ── STATE ANIMATIONS ────────────────────────────────────── */
 
-@keyframes leaf-sway {
-  0%, 100% { transform: translateX(0) translateY(0); }
-  25% { transform: translateX(1px) translateY(-0.5px); }
-  75% { transform: translateX(-1px) translateY(0.5px); }
+/* DEAD */
+.org-state-dead .org-svg {
+  background-color: var(--danger);
+  border-color: var(--text-primary);
+  background-image: radial-gradient(rgba(255,255,255,0.2) 4px, transparent 4px);
 }
-
-/* Peak spark travels up trunk */
-.tree-spark {
-  animation: spark-travel 3s ease-in-out infinite;
+.org-state-dead .tree-branch {
+  stroke: var(--text-inverse);
+  stroke-dasharray: 4;
+  animation: edge-march 0.5s linear infinite;
 }
-@keyframes spark-travel {
-  0%   { cy: 200; opacity: 0; }
-  10%  { opacity: 1; }
-  80%  { cy: 60; opacity: 1; }
-  100% { cy: 40; opacity: 0; }
+.org-state-dead .blowing-leaf {
+  animation: blow-in-wind 0.3s steps(2) infinite alternate;
 }
 
-/* Top leaf shimmer at peak */
-.top-leaf {
-  animation: leaf-sway 4s ease-in-out infinite, top-leaf-shimmer 2s ease-in-out infinite;
+/* STRUGGLING */
+.org-state-struggling .org-svg {
+  background-color: #FFF5F5;
+  border-color: var(--danger);
+  box-shadow: 8px 8px 0 var(--danger);
 }
-@keyframes top-leaf-shimmer {
-  0%, 100% { filter: none; }
-  50% { filter: brightness(1.5); }
+.org-state-struggling .tree-leaf {
+  animation: breathe 3s ease-in-out infinite alternate;
+  opacity: 0.8;
+}
+.org-state-struggling .tree-branch {
+  stroke: var(--danger);
 }
 
-/* State-specific ambient */
-.tree-state-dead .tree-trunk { stroke: var(--bg-4); }
-.tree-state-dead .tree-roots { opacity: 0.15; }
-.tree-state-dead .leaf { display: none; }
-
-.tree-state-struggling .leaf { animation-duration: 8s; }
-
-.tree-state-peak .root-node { animation-duration: 1.5s; }
-.tree-state-peak .leaf { animation-duration: 2.5s; }
-
-.tree-label {
-  font-size: 20px !important;
-  margin-top: var(--space-8);
+/* GROWING */
+.org-state-growing .tree-leaf {
+  animation: breathe 2s ease-in-out infinite alternate;
 }
+
+/* THRIVING */
+.org-state-thriving .org-svg {
+  background-color: var(--health-dim);
+}
+.org-state-thriving .tree-leaf {
+  animation: brutal-pulse 1s steps(2, end) infinite;
+}
+
+/* PEAK */
+.org-state-peak .org-svg {
+  background-color: var(--warning);
+}
+.org-state-peak .tree-leaf {
+  animation: brutal-pulse-fast 0.4s steps(2, end) infinite;
+}
+.org-state-peak .tree-branch {
+  stroke: var(--text-primary);
+}
+
+
+/* ── KEYFRAMES ───────────────────────────────────────────── */
+
+@keyframes brutal-pulse {
+  0% { transform: scale(1) rotate(0deg); stroke-width: 2px; }
+  50% { transform: scale(1.3) rotate(45deg); stroke-width: 4px; }
+  100% { transform: scale(1) rotate(0deg); stroke-width: 2px; }
+}
+
+@keyframes brutal-pulse-fast {
+  0% { transform: scale(1) rotate(0deg); stroke-width: 2px; }
+  50% { transform: scale(1.5) rotate(45deg); stroke-width: 4px; }
+  100% { transform: scale(1) rotate(0deg); stroke-width: 2px; }
+}
+
+@keyframes breathe {
+  0% { transform: scale(0.9); }
+  100% { transform: scale(1.1); }
+}
+
+@keyframes blow-in-wind {
+  0% { transform: rotate(0deg) translate(0, 0); }
+  50% { transform: rotate(45deg) translate(2px, -2px); opacity: 0.5; }
+  100% { transform: rotate(-45deg) translate(-2px, -4px); opacity: 1; }
+}
+
+@keyframes svg-jitter {
+  0% { transform: translate(1px, 1px); }
+  25% { transform: translate(-2px, -1px); }
+  50% { transform: translate(0px, 2px); }
+  75% { transform: translate(2px, 0px); }
+  100% { transform: translate(-1px, 1px); }
+}
+
+@keyframes edge-march {
+  to { stroke-dashoffset: -16; }
+}
+
+/* ── LABEL ───────────────────────────────────────────────── */
+.org-label {
+  text-align: center;
+  border: 4px solid var(--text-primary);
+  padding: 8px 16px;
+  background: var(--bg-0);
+  box-shadow: 6px 6px 0 var(--text-primary);
+  margin-top: 8px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.org-state-dead .org-label { background: var(--danger); color: var(--text-inverse); }
+.org-state-struggling .org-label { background: #FFF5F5; border-color: var(--danger); box-shadow: 6px 6px 0 var(--danger); color: var(--danger); }
+.org-state-growing .org-label { background: var(--bg-0); }
+.org-state-thriving .org-label { background: var(--success); }
+.org-state-peak .org-label { background: var(--warning); }

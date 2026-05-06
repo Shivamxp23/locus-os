@@ -57,6 +57,23 @@ export default function Dashboard() {
     }
   }, [dcs]);
 
+  // Apply fullscreen background color
+  useEffect(() => {
+    if (mode) {
+      document.body.style.backgroundColor = getModeBgColor(mode);
+      document.body.style.backgroundImage = 'none'; // Clear dot grid for brutal solid color
+    } else {
+      document.body.style.backgroundColor = 'var(--bg-0)';
+      document.body.style.backgroundImage = 'radial-gradient(rgba(0, 0, 0, 0.15) 1.5px, transparent 1.5px)';
+      document.body.style.backgroundSize = '12px 12px';
+    }
+    return () => {
+      document.body.style.backgroundColor = 'var(--bg-0)';
+      document.body.style.backgroundImage = 'radial-gradient(rgba(0, 0, 0, 0.15) 1.5px, transparent 1.5px)';
+      document.body.style.backgroundSize = '12px 12px';
+    }
+  }, [mode]);
+
   const checkinTypes = ['morning', 'afternoon', 'evening', 'night'];
   const checkinLabels = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night' };
 
@@ -93,38 +110,18 @@ export default function Dashboard() {
         </section>
 
         {/* DCS Command Strip */}
-        <section className="dash-dcs card">
+        <section className="dash-dcs">
           {dcs !== null ? (
             <div className="dash-dcs-inner">
-              <div className="dash-dcs-left">
-                <span className="caption text-tertiary">DCS</span>
-                <span className="data-xl" ref={dcsRef} style={{ color: getModeColor(mode) }}>
-                  {dcs?.toFixed(1)}
-                </span>
-              </div>
-              <div className="dash-dcs-divider" />
-              <div className="dash-dcs-right">
-                <span
-                  className="mode-badge"
-                  style={{
-                    background: getModeBgColor(mode),
-                    color: getModeColor(mode),
-                  }}
-                >
-                  {getModeLabel(mode)}
-                </span>
-                <span className="caption text-tertiary" style={{ marginTop: 4 }}>
-                  Based on this morning's check-in
-                </span>
-              </div>
+              <span className="dcs-big-number" ref={dcsRef}>{dcs?.toFixed(1)}</span>
+              <span className="mode-badge" style={{ background: getModeBgColor(mode), color: 'var(--text-primary)' }}>
+                {getModeLabel(mode)}
+              </span>
             </div>
           ) : (
-            <button
-              className="dash-dcs-empty"
-              onClick={() => navigate('/checkin')}
-            >
+            <button className="dash-dcs-empty card" onClick={() => navigate('/checkin')}>
               <div className="dash-pulse-dot pulse-dot" />
-              <span className="body text-secondary">Log your morning first →</span>
+              <span className="body text-primary">Log your morning first →</span>
             </button>
           )}
         </section>

@@ -43,8 +43,9 @@
 .dash-dcs-inner {
   display: flex;
   align-items: center;
-  gap: var(--space-24);
+  gap: var(--space-16);
   width: 100%;
+  flex-wrap: wrap;
 }
 .dash-dcs-left {
   display: flex;

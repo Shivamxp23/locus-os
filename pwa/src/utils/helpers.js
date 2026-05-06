@@ -37,13 +37,13 @@ export function getModeColor(mode) {
 
 export function getModeBgColor(mode) {
   const colors = {
-    SURVIVAL: 'rgba(196, 107, 107, 0.12)',
-    RECOVERY: 'rgba(212, 168, 83, 0.12)',
-    NORMAL: 'rgba(91, 143, 191, 0.12)',
-    DEEP_WORK: 'rgba(90, 158, 120, 0.12)',
-    PEAK: 'rgba(201, 169, 110, 0.15)',
+    SURVIVAL: '#FF3B30',
+    RECOVERY: '#FFD60A',
+    NORMAL: '#FFFFFF',
+    DEEP_WORK: '#34C759',
+    PEAK: '#FFD60A',
   };
-  return colors[mode] || 'var(--bg-2)';
+  return colors[mode] || 'var(--bg-0)';
 }
 
 export function getModeLabel(mode) {

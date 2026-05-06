@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import './TreeOrganism.css';
 
-// A geometric, architectural tree SVG — circuit/bonsai hybrid
 export default function TreeOrganism({ compositeScore = 5.0, size = 220, compact = false }) {
   const state = useMemo(() => {
     if (compositeScore < 2.0) return 'dead';
@@ -12,118 +11,119 @@ export default function TreeOrganism({ compositeScore = 5.0, size = 220, compact
   }, [compositeScore]);
 
   const stateLabel = {
-    dead: 'Systems critical.',
-    struggling: 'Needs attention.',
-    growing: 'Moving forward.',
-    thriving: 'Thriving. Keep going.',
-    peak: 'Peak condition.',
+    dead: 'SYSTEMS CRITICAL',
+    struggling: 'NEEDS ATTENTION',
+    growing: 'MOVING FORWARD',
+    thriving: 'THRIVING',
+    peak: 'PEAK CONDITION',
   };
 
-  // Dynamic opacities based on state
-  const rootOpacity = state === 'dead' ? 0.2 : state === 'struggling' ? 0.4 : state === 'growing' ? 0.6 : 1;
-  const canopyOpacity = state === 'dead' ? 0.1 : state === 'struggling' ? 0.3 : state === 'growing' ? 0.5 : state === 'thriving' ? 0.8 : 1;
-  const glowIntensity = state === 'peak' ? 0.6 : state === 'thriving' ? 0.35 : state === 'growing' ? 0.15 : 0.05;
-  const leafCount = state === 'dead' ? 0 : state === 'struggling' ? 3 : state === 'growing' ? 6 : state === 'thriving' ? 10 : 14;
-  const sparkActive = state === 'peak';
+  const { branches, leaves } = useMemo(() => {
+    let maxDepth = 6;
+    let leavesProb = 1.0;
+    
+    if (state === 'dead') {
+       maxDepth = 3;
+       leavesProb = 0.0; // Handled specially below
+    } else if (state === 'struggling') {
+       maxDepth = 4;
+       leavesProb = 0.3;
+    } else if (state === 'growing') {
+       maxDepth = 5;
+       leavesProb = 0.6;
+    } else if (state === 'thriving') {
+       maxDepth = 6;
+       leavesProb = 0.85;
+    } else if (state === 'peak') {
+       maxDepth = 7;
+       leavesProb = 1.0;
+    }
+
+    const b = [];
+    const l = [];
+    
+    const build = (x, y, len, angle, depth, path) => {
+      const endX = x + len * Math.sin(angle);
+      const endY = y - len * Math.cos(angle);
+      
+      const width = state === 'peak' ? Math.max(2, (8 - depth)*1.2) : Math.max(1, (7 - depth));
+      
+      b.push({ id: `b-${path}`, x1: x, y1: y, x2: endX, y2: endY, width });
+      
+      const seed = path.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const hash = (n) => {
+         let val = Math.sin(seed * 13.37 + n * 42.42) * 10000;
+         return val - Math.floor(val);
+      };
+
+      if (depth < maxDepth) {
+        const spread1 = 0.3 + hash(1) * 0.4;
+        const spread2 = 0.3 + hash(2) * 0.4;
+        
+        const len1 = len * (0.7 + hash(3)*0.15);
+        const len2 = len * (0.7 + hash(4)*0.15);
+        
+        build(endX, endY, len1, angle - spread1, depth + 1, path + 'L');
+        build(endX, endY, len2, angle + spread2, depth + 1, path + 'R');
+        
+        if (hash(5) > 0.6 && depth > 1) {
+           build(endX, endY, len * 0.5, angle + (hash(6) - 0.5)*0.3, depth + 1, path + 'M');
+        }
+      } else {
+        if (state !== 'dead' && hash(7) < leavesProb) {
+           // Unified color instead of multicolored dots
+           const color = 'var(--text-primary)';
+           l.push({ id: `l-${path}`, x: endX, y: endY, color, size: 4 + hash(9)*3 });
+        }
+      }
+    };
+    
+    build(100, 190, 45, 0, 1, 'T');
+    
+    if (state === 'dead') {
+       // Just one leaf holding on for dear life
+       const tip = b[b.length - 1];
+       l.push({ id: 'l-last-leaf', x: tip.x2, y: tip.y2, color: 'var(--health)', size: 5, isLastLeaf: true });
+    }
+    
+    return { branches: b, leaves: l };
+  }, [state]);
 
   return (
-    <div className={`tree-organism tree-state-${state} ${compact ? 'tree-compact' : ''}`}>
+    <div className={`node-organism org-state-${state} ${compact ? 'org-compact' : ''}`}>
       <svg
-        viewBox="0 0 200 260"
+        viewBox="0 0 200 200"
         width={compact ? 120 : size}
-        height={compact ? 150 : (size * 1.18)}
-        className="tree-svg"
+        height={compact ? 120 : size}
+        className="org-svg"
       >
-        <defs>
-          <radialGradient id="trunkGlow" cx="50%" cy="60%">
-            <stop offset="0%" stopColor="var(--gold)" stopOpacity={glowIntensity} />
-            <stop offset="100%" stopColor="transparent" stopOpacity="0" />
-          </radialGradient>
-          <filter id="softGlow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Ambient glow */}
-        <circle cx="100" cy="130" r="80" fill="url(#trunkGlow)" />
-
-        {/* Roots — 4 factions */}
-        <g className="tree-roots" opacity={rootOpacity}>
-          {/* Health root */}
-          <path d="M90 200 L70 235 L55 250" stroke="var(--health)" strokeWidth="2" fill="none"
-                className="tree-root root-health" />
-          <circle cx="55" cy="250" r="3" fill="var(--health)" className="root-node" opacity={rootOpacity} />
-
-          {/* Leverage root */}
-          <path d="M105 200 L125 240 L140 255" stroke="var(--leverage)" strokeWidth="2" fill="none"
-                className="tree-root root-leverage" />
-          <circle cx="140" cy="255" r="3" fill="var(--leverage)" className="root-node" opacity={rootOpacity} />
-
-          {/* Craft root */}
-          <path d="M95 200 L80 245 L70 258" stroke="var(--craft)" strokeWidth="2" fill="none"
-                className="tree-root root-craft" />
-          <circle cx="70" cy="258" r="2.5" fill="var(--craft)" className="root-node" opacity={rootOpacity} />
-
-          {/* Expression root */}
-          <path d="M110 200 L130 248 L150 258" stroke="var(--expression)" strokeWidth="2" fill="none"
-                className="tree-root root-expression" />
-          <circle cx="150" cy="258" r="2.5" fill="var(--expression)" className="root-node" opacity={rootOpacity} />
-        </g>
-
-        {/* Trunk */}
-        <path d="M100 200 L100 120" stroke="var(--text-tertiary)" strokeWidth="3" fill="none"
-              className="tree-trunk" opacity={state === 'dead' ? 0.3 : 0.7} />
-        <path d="M100 180 L100 130" stroke="var(--gold)" strokeWidth="2" fill="none"
-              className="tree-trunk-inner" opacity={glowIntensity * 2} filter="url(#softGlow)" />
-
-        {/* Branches */}
-        <g className="tree-branches" opacity={canopyOpacity}>
-          {/* Main branches */}
-          <path d="M100 160 L60 130" stroke="var(--text-tertiary)" strokeWidth="1.5" fill="none" />
-          <path d="M100 160 L140 125" stroke="var(--text-tertiary)" strokeWidth="1.5" fill="none" />
-          <path d="M100 140 L55 100" stroke="var(--text-tertiary)" strokeWidth="1.5" fill="none" />
-          <path d="M100 140 L145 95" stroke="var(--text-tertiary)" strokeWidth="1.5" fill="none" />
-          <path d="M100 130 L75 80" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" />
-          <path d="M100 130 L125 75" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" />
-          <path d="M100 120 L100 60" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" />
-
-          {/* Sub-branches */}
-          <path d="M60 130 L40 110" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" opacity="0.7" />
-          <path d="M140 125 L160 105" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" opacity="0.7" />
-          <path d="M55 100 L35 75" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" opacity="0.6" />
-          <path d="M145 95 L165 70" stroke="var(--text-tertiary)" strokeWidth="1" fill="none" opacity="0.6" />
-        </g>
-
-        {/* Leaf nodes */}
-        <g className="tree-leaves">
-          {leafCount >= 1 && <circle cx="60" cy="130" r="4" fill="var(--health)" opacity={canopyOpacity} className="leaf" />}
-          {leafCount >= 2 && <circle cx="140" cy="125" r="4" fill="var(--leverage)" opacity={canopyOpacity} className="leaf" />}
-          {leafCount >= 3 && <circle cx="55" cy="100" r="4.5" fill="var(--craft)" opacity={canopyOpacity} className="leaf" />}
-          {leafCount >= 4 && <circle cx="145" cy="95" r="4.5" fill="var(--expression)" opacity={canopyOpacity} className="leaf" />}
-          {leafCount >= 5 && <circle cx="100" cy="60" r="5" fill="var(--gold)" opacity={canopyOpacity} className="leaf" />}
-          {leafCount >= 6 && <circle cx="75" cy="80" r="3.5" fill="var(--health)" opacity={canopyOpacity * 0.8} className="leaf" />}
-          {leafCount >= 7 && <circle cx="125" cy="75" r="3.5" fill="var(--leverage)" opacity={canopyOpacity * 0.8} className="leaf" />}
-          {leafCount >= 8 && <circle cx="40" cy="110" r="3" fill="var(--craft)" opacity={canopyOpacity * 0.7} className="leaf" />}
-          {leafCount >= 9 && <circle cx="160" cy="105" r="3" fill="var(--expression)" opacity={canopyOpacity * 0.7} className="leaf" />}
-          {leafCount >= 10 && <circle cx="35" cy="75" r="3" fill="var(--health)" opacity={canopyOpacity * 0.6} className="leaf" />}
-          {leafCount >= 11 && <circle cx="165" cy="70" r="3" fill="var(--leverage)" opacity={canopyOpacity * 0.6} className="leaf" />}
-          {leafCount >= 12 && <circle cx="90" cy="50" r="3" fill="var(--craft)" opacity={canopyOpacity * 0.8} className="leaf" />}
-          {leafCount >= 13 && <circle cx="110" cy="45" r="3" fill="var(--expression)" opacity={canopyOpacity * 0.8} className="leaf" />}
-          {leafCount >= 14 && <circle cx="100" cy="40" r="4" fill="var(--gold)" opacity={canopyOpacity} className="leaf top-leaf" />}
-        </g>
-
-        {/* Peak spark */}
-        {sparkActive && (
-          <circle cx="100" cy="200" r="3" fill="var(--gold)" className="tree-spark" filter="url(#softGlow)" />
-        )}
+        {branches.map(branch => (
+          <line
+            key={branch.id}
+            x1={branch.x1} y1={branch.y1} x2={branch.x2} y2={branch.y2}
+            stroke="var(--text-primary)"
+            strokeWidth={branch.width}
+            strokeLinecap="square"
+            className="tree-branch"
+          />
+        ))}
+        {leaves.map(leaf => (
+          <rect
+            key={leaf.id}
+            x={leaf.x - leaf.size/2} 
+            y={leaf.y - leaf.size/2} 
+            width={leaf.size} 
+            height={leaf.size}
+            fill={leaf.color}
+            stroke="var(--text-primary)"
+            strokeWidth="2"
+            className={`tree-leaf ${leaf.isLastLeaf ? 'blowing-leaf' : ''}`}
+            style={{ transformOrigin: `${leaf.x}px ${leaf.y}px` }}
+          />
+        ))}
       </svg>
-
       {!compact && (
-        <p className="tree-label display-m" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <p className="org-label heading-1">
           {stateLabel[state]}
         </p>
       )}

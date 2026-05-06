@@ -113,7 +113,7 @@ export default function AnalyticsScreen() {
                       className="analytics-bar"
                       style={{
                         height: `${((d.dcs || 0) / 10) * 100}%`,
-                        background: `linear-gradient(to top, var(--gold) 0%, rgba(201,169,110,0.3) 100%)`,
+                        background: `var(--text-primary)`,
                       }}
                       title={`${d.date}: DCS ${d.dcs?.toFixed(1)} — ${d.mode}`}
                     />
@@ -203,13 +203,13 @@ export default function AnalyticsScreen() {
                 {avoidances.length > 0 ? avoidances.map((d, i) => (
                   <div key={i} className="analytics-deferral-item">
                     <div className="analytics-deferral-left">
-                      <span className="body">{d.what}</span>
+                      <span className="body" style={{ fontSize: 20, fontWeight: 900, textTransform: 'uppercase' }}>{d.what}</span>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        {d.why && <span className="caption text-tertiary">Why: {d.why}</span>}
-                        <span className="caption text-tertiary">Since: {d.first_seen}</span>
+                        {d.why && <span className="caption text-inverse">Why: {d.why}</span>}
+                        <span className="caption text-inverse">Since: {d.first_seen}</span>
                       </div>
                     </div>
-                    <span className="data-m text-danger">{d.frequency}×</span>
+                    <span className="data-l text-inverse">{d.frequency}×</span>
                   </div>
                 )) : (
                   <p className="body-small text-tertiary" style={{ padding: 16, textAlign: 'center' }}>

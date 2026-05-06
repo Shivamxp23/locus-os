@@ -195,9 +195,13 @@ function TaskGroup({ label, tasks, onComplete, onDefer }) {
 function TaskCard({ task, onComplete, onDefer }) {
   const factionColor = getFactionColor(task.faction);
   const isDone = task.status === 'done';
+  const deferrals = task.defer_count || 0;
+  let severityClass = '';
+  if (deferrals > 0 && deferrals < 5) severityClass = 'card-deferred';
+  else if (deferrals >= 5) severityClass = 'card-deferred-severe';
 
   return (
-    <div className={`task-card card ${isDone ? 'task-done' : ''}`} style={{ borderLeftColor: factionColor }}>
+    <div className={`task-card card ${isDone ? 'task-done' : ''} ${severityClass}`} style={{ borderLeftColor: factionColor }}>
       <button
         className="task-checkbox"
         style={{ borderColor: factionColor, background: isDone ? factionColor : 'transparent' }}
@@ -216,10 +220,20 @@ function TaskCard({ task, onComplete, onDefer }) {
               <Clock size={12} style={{ verticalAlign: 'middle' }} /> ~{task.estimated_hours}h
             </span>
           )}
+          {deferrals > 0 && (
+            <span className="body-small text-inverse" style={{ fontWeight: 800, background: 'var(--danger)', padding: '2px 6px', border: '2px solid var(--text-primary)' }}>
+              DEFERRED {deferrals}x
+            </span>
+          )}
         </div>
       </div>
-      <div className="task-right">
+      <div className="task-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         <span className="data-m text-secondary">{task.priority}</span>
+        {!isDone && (
+          <button className="btn-secondary" onClick={() => onDefer(task.id)} style={{ padding: '4px 8px', fontSize: '10px' }}>
+            SKIP
+          </button>
+        )}
       </div>
     </div>
   );
