@@ -7,13 +7,15 @@ from services.vault_jobs import (
     nightly_diff, weekly_synthesis,
     nightly_pattern_detection, exhaustion_check, dead_node_detection
 )
+from services.vault_change_tracker import detect_changes, log_changes_to_db
 import os
 import logging
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("locus-api")
 
-app = FastAPI(title="Locus API", version="2.0.0")
+app = FastAPI(title="Locus API", version="3.1.0")
 
 # ── CORS ──
 app.add_middleware(
@@ -87,6 +89,13 @@ async def startup():
     # ── Nightly Jobs ──
     scheduler.add_job(nightly_diff, "cron", hour=23, minute=30,
                       id="nightly_diff", replace_existing=True)
+
+    async def _track_vault_changes():
+        changes = detect_changes()
+        await log_changes_to_db(changes)
+
+    scheduler.add_job(_track_vault_changes, "cron", hour=0, minute=0,
+                      id="vault_change_track", replace_existing=True)
 
     scheduler.add_job(nightly_pattern_detection, "cron", hour=2, minute=30,
                       id="pattern_detection", replace_existing=True)

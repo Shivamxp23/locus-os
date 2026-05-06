@@ -9,6 +9,7 @@ from backend.skills.locus.brain.scheduler import generate_schedule, reschedule, 
 from backend.skills.locus.brain.pattern_engine import run_weekly as get_patterns
 from backend.skills.locus.brain.goal_tracker import run_weekly_review
 from backend.skills.locus.brain.pipeline import execute_query
+from backend.services.goal_distiller import distill_goals, get_clarification_prompt, is_vague
 
 router = APIRouter(prefix="/brain", tags=["Brain"])
 
@@ -57,6 +58,21 @@ async def api_goals():
 @router.get("/weekly-review")
 async def api_weekly_review():
     return await run_weekly_review()
+
+@router.post("/goals/distill")
+async def api_goals_distill():
+    """Parse Goals.md, return distilled goals + projects + vague goals needing clarification."""
+    distilled = distill_goals()
+    return distilled
+
+@router.get("/goals/clarification/{goal_title}")
+async def api_goal_clarification(goal_title: str):
+    """Get clarification questions for a vague goal."""
+    goals = distill_goals().get("vague_goals", [])
+    for g in goals:
+        if goal_title.lower() in g.get("title", "").lower():
+            return {"questions": get_clarification_prompt(g).split("\n")}
+    return {"questions": ["Goal not found in vague goals"]}
 
 @router.post("/chat")
 async def api_chat(request: ChatRequest):

@@ -35,7 +35,8 @@ def _get_history(uid: int) -> list:
 ROUTER_PROMPT = """Route Shivam's message. Return JSON only.
 
 Actions:
-- vault_search: searching notes/knowledge. field: "query"
+- vault_search: searching notes/knowledge semantically. field: "query"
+- file_read: read a specific named file from vault. field: "file_path"
 - capture: saving idea/note. field: "text"
 - create_task: add a task. fields: "title", "faction" (health/leverage/craft/expression), "priority" (1-10), "urgency" (1-10), "difficulty" (1-10)
 - schedule: see today's schedule or what to work on
@@ -48,6 +49,8 @@ Return ONLY valid JSON. No markdown.
 Examples:
 "hi" → {"action":"converse"}
 "what did I write about filmmaking" → {"action":"vault_search","query":"filmmaking"}
+"extract from creating-syllabus-student-who-wants-become.md" → {"action":"file_read","file_path":"creating-syllabus-student-who-wants-become.md"}
+"read my notes on filmmaking.md" → {"action":"file_read","file_path":"my notes on filmmaking.md"}
 "note: idea about camera angles" → {"action":"capture","text":"idea about camera angles"}
 "log my morning" → {"action":"redirect_to_pwa"}
 "add task: finish API docs" → {"action":"create_task","title":"finish API docs","faction":"leverage","priority":6,"urgency":7,"difficulty":4}
@@ -180,12 +183,16 @@ Always cite your reasoning. If you spotted a pattern, say so explicitly.\n\n"""
 
     prompt += f"\n**Vault indexed notes:** {q.get('points_count', 0)}\n"
     prompt += """
-Rules:
+Rules (MUST FOLLOW - no exceptions):
 - If vault results are provided above, USE them. Quote specific notes. Name the file.
+- NEVER claim to have read a file unless it appears in the Vault context section above
+- If searching for a SPECIFIC FILE and it's not in results, say "I couldn't find that file in your vault"
+- NEVER invent file contents, syllabi, lists, scores, or any data you haven't retrieved
 - If you spot avoidance, call it out directly but constructively.
 - Connect dots across projects and interests.
 - If DCS is low, adjust your expectations of what to suggest.
 - Be specific, not generic. Vague advice is useless.
+- If you don't know, say "I don't have that information"
 - Direct the user to locusapp.online for check-ins and task logging.
 """
     return prompt
@@ -384,6 +391,59 @@ async def cmd_clear(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_user.id] = []
     await update.message.reply_text("Memory cleared. Fresh start.")
 
+@owner_only
+async def cmd_distill(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Run goal distillation and report vague goals needing clarification."""
+    await update.message.reply_text("🎯 Distilling goals...")
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"{API_URL}/api/v1/brain/goals/distill",
+                headers=api_headers
+            )
+            if r.status_code == 200:
+                data = r.json()
+                vague = data.get("vague_goals", [])
+                if vague:
+                    lines = ["⚠️ *Goals needing clarification:*\n"]
+                    for g in vague:
+                        lines.append(f"\n*Goal:* {g.get('title', 'Untitled')}")
+                        for issue in g.get("vagueness_issues", []):
+                            lines.append(f"  • {issue}")
+                    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+                else:
+                    await update.message.reply_text("✅ All goals are clear and actionable!")
+            else:
+                await update.message.reply_text(f"Error: {r.status_code}")
+    except Exception as e:
+        await update.message.reply_text(f"Error: {e}")
+
+@owner_only
+async def cmd_find(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    query = update.message.text.replace("/find ", "").strip()
+    if not query:
+        await update.message.reply_text("Usage: /find filename.md")
+        return
+    msg = await update.message.reply_text(f"🔍 Searching vault for: {query}...")
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                f"{API_URL}/api/v1/brain/read",
+                json={"file_path": query},
+                headers=api_headers
+            )
+        if r.status_code == 200:
+            data = r.json()
+            if data.get("found"):
+                word_count = data.get("word_count", 0)
+                await msg.edit_text(f"✅ Found: {query} ({word_count} words)")
+            else:
+                await msg.edit_text(f"❌ Not found: {query}")
+        else:
+            await msg.edit_text(f"Error: API returned {r.status_code}")
+    except Exception as e:
+        await msg.edit_text(f"Error: {e}")
+
 
 # ─── Main Message Handler ────────────────────────────────────────────────────
 
@@ -464,6 +524,40 @@ async def process_text(text: str, uid: int, update: Update):
 
             await thinking_msg.delete()
             await update.message.reply_text(reply)
+
+        elif a == "file_read":
+            file_path = action.get("file_path", "")
+            await update_thinking(thinking_msg, f"📄 Reading: {file_path}...")
+            try:
+                async with httpx.AsyncClient(timeout=15) as client:
+                    r = await client.post(
+                        f"{API_URL}/api/v1/brain/read",
+                        json={"file_path": file_path},
+                        headers=api_headers
+                    )
+                if r.status_code == 200:
+                    data = r.json()
+                    if data.get("found"):
+                        content = data.get("content", "")[:2000]
+                        truncated = data.get("truncated", False)
+                        await thinking_msg.delete()
+                        await update.message.reply_text(
+                            f"📄 *{file_path}*\n\n{content}",
+                            parse_mode="Markdown"
+                        )
+                        if truncated:
+                            await update.message.reply_text(
+                                f"⚠️ File truncated to 2000 words. Full file is longer."
+                            )
+                    else:
+                        await thinking_msg.edit_text(
+                            f"I couldn't find *{file_path}* in your vault.",
+                            parse_mode="Markdown"
+                        )
+                else:
+                    await thinking_msg.edit_text("⚠️ File read failed — API may be down.")
+            except Exception as e:
+                await thinking_msg.edit_text(f"⚠️ File read error: {e}")
 
         elif a == "capture":
             capture_text = action.get("text", text)
@@ -568,9 +662,11 @@ def main():
     app.add_handler(CommandHandler("schedule", cmd_schedule))
     app.add_handler(CommandHandler("sync",     cmd_sync))
     app.add_handler(CommandHandler("clear",    cmd_clear))
+    app.add_handler(CommandHandler("find",     cmd_find))
+    app.add_handler(CommandHandler("distill",   cmd_distill))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
-    log.info("Locus bot v5 started — full brain-wired with thinking status.")
+    log.info("Locus bot v6 started — anti-hallucination + file_read action.")
     app.run_polling()
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 SERVICE_TOKEN = os.getenv("LOCUS_SERVICE_TOKEN", "")
 
+import asyncio
 
 def _check(token):
     if token != SERVICE_TOKEN:
@@ -30,25 +31,25 @@ async def enrich_vault(
     """Trigger vault enrichment + proposition-based indexing in background."""
     _check(x_service_token)
 
-    async def _run():
-        try:
-            # Phase 1: Proposition indexing
-            from services.vault_indexer_v2 import run_incremental_index
-            summary = await run_incremental_index()
-            log.info(f"Vault index complete: {summary}")
-        except Exception as e:
-            log.error(f"Vault indexing failed: {e}")
+    from services.vault_enricher import trigger_enrichment
+    background_tasks.add_task(trigger_enrichment)
+    return {"status": "enrichment started"}
 
-        try:
-            # Phase 2: Enrichment
-            from services.vault_enricher import run_enrichment
-            enriched = await run_enrichment()
-            log.info(f"Vault enrichment complete: {enriched} files")
-        except Exception as e:
-            log.error(f"Vault enrichment failed: {e}")
 
-    background_tasks.add_task(_run)
-    return {"status": "started", "message": "Vault indexing + enrichment started in background"}
+@router.get("/vault/changes")
+async def vault_changes(x_service_token: str = Header(None)):
+    """Get today's vault changes (added/modified/deleted)."""
+    _check(x_service_token)
+    from services.vault_change_tracker import detect_changes
+    return detect_changes()
+
+
+@router.get("/vault/changes/summary")
+async def vault_changes_summary(x_service_token: str = Header(None)):
+    """Get human-readable change summary."""
+    _check(x_service_token)
+    from services.vault_change_tracker import get_daily_summary
+    return {"summary": get_daily_summary()}
 
 
 @router.post("/vault/reindex")
