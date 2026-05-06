@@ -1,10 +1,10 @@
 import logging
-from backend.skills.locus.brain.retriever import retrieve
-from backend.skills.locus.brain.reader import read_vault_file
-from backend.skills.locus.brain.scheduler import generate_schedule
-from backend.skills.locus.brain.pattern_engine import run_weekly as get_patterns
-from backend.skills.locus.brain.web_searcher import search_web
-from backend.skills.locus.brain.generator import generate_response
+from skills.locus.brain.retriever import retrieve
+from skills.locus.brain.reader import read_vault_file
+from skills.locus.brain.scheduler import generate_schedule
+from skills.locus.brain.pattern_engine import run_weekly as get_patterns
+from skills.locus.brain.web_searcher import search_web
+from skills.locus.brain.generator import generate_response
 
 log = logging.getLogger("brain.pipeline")
 

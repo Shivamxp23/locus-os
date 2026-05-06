@@ -75,7 +75,7 @@ app.include_router(analytics_data.router, prefix="/api/v1")
 from routers import push, vector
 app.include_router(push.router,           prefix="/api/v1")
 app.include_router(vector.router,         prefix="/api/v1")
-from backend.skills.locus.brain.router import router as brain_router
+from skills.locus.brain.router import router as brain_router
 app.include_router(brain_router,          prefix="/api/v1")
 
 # ── Scheduler ──
@@ -111,9 +111,9 @@ async def startup():
                       id="dead_node_detection", replace_existing=True)
 
     # ── Brain Module Jobs ──
-    from backend.skills.locus.brain.collector import run_nightly_crawl
-    from backend.skills.locus.brain.pattern_engine import run_weekly as pattern_run_weekly
-    from backend.skills.locus.brain.goal_tracker import run_weekly_review
+    from skills.locus.brain.collector import run_nightly_crawl
+    from skills.locus.brain.pattern_engine import run_weekly as pattern_run_weekly
+    from skills.locus.brain.goal_tracker import run_weekly_review
     
     scheduler.add_job(run_nightly_crawl, "cron", hour=2, minute=0,
                       id="brain_crawl", replace_existing=True)
