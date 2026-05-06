@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Optional
 import asyncpg
-from backend.services.qdrant_service import direct_search
+from services.qdrant_service import direct_search
 
 log = logging.getLogger("brain.retriever")
 DATABASE_URL = os.getenv("DATABASE_URL")

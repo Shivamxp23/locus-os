@@ -3,7 +3,7 @@ import re
 import logging
 import asyncio
 from typing import Optional
-from backend.services.qdrant_service import get_embeddings_batch, ensure_collection, QDRANT_URL, COLLECTION, _stable_id
+from services.qdrant_service import get_embeddings_batch, ensure_collection, QDRANT_URL, COLLECTION, _stable_id
 import httpx
 
 log = logging.getLogger("brain.chunker")

@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from backend.services.llm import call_llm
+from services.llm import call_llm
 
 log = logging.getLogger("brain.generator")
 
