@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import {
-  calculateDCS, getModeColor, getModeBgColor,
+  calculateDCS, getModeFromDCS, getModeColor, getModeBgColor,
   getModeLabel, getModeDescription, formatTime,
 } from '../utils/helpers';
 import './CheckIn.css';
@@ -43,7 +43,8 @@ function MorningCheckIn({ navigate, setDCS, setCheckin, addToast }) {
 
   const handleSubmit = useCallback(async () => {
     setLoading(true);
-    const { dcs, mode } = calculateDCS(energy, mood, sleep, stress);
+    const dcs = calculateDCS(energy, mood, sleep, stress);
+    const mode = getModeFromDCS(dcs);
     const res = await api.morningCheckin({
       energy, mood, sleep_quality: sleep, stress, intention: intention || null,
     });
