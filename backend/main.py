@@ -122,15 +122,18 @@ async def startup():
     scheduler.add_job(run_weekly_review, "cron", day_of_week="sun", hour=23, minute=30,
                       id="brain_weekly_review", replace_existing=True)
 
+    # ── System 2 & 3 Jobs ──
+    from core.inner_loop import run_standard_pass, run_nightly_synthesis, run_morning_briefing, decay_neo4j_weights
+    from core.pattern_detector import run_all_horizons
+
+    scheduler.add_job(run_all_horizons, "interval", hours=6, id="system2_patterns", replace_existing=True)
+    scheduler.add_job(run_standard_pass, "interval", minutes=90, id="system3_inner_loop", replace_existing=True)
+    scheduler.add_job(run_nightly_synthesis, "cron", hour=3, minute=0, id="system3_nightly", replace_existing=True)
+    scheduler.add_job(run_morning_briefing, "cron", hour=8, minute=0, id="system3_morning", replace_existing=True)
+    scheduler.add_job(decay_neo4j_weights, "cron", day_of_week="sun", hour=3, minute=30, id="system3_decay", replace_existing=True)
+
     scheduler.start()
     log.info("APScheduler started with all jobs including Brain Module")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    log.info("Locus API shutting down...")
-    from services.neo4j_service import close_driver
-    await close_driver()
 
 
 @app.get("/health")
@@ -148,3 +151,7 @@ async def health():
         "jobs": [j.id for j in scheduler.get_jobs()],
         "sync": sync_status,
     }
+
+# Added for System 2 Router
+from routers import inference
+app.include_router(inference.router, prefix="/api/v1")
