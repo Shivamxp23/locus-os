@@ -99,15 +99,20 @@ export function getFactionLabel(faction) {
 }
 
 export function calculateDCS(e, m, s, st) {
-  const dcs = Math.round(((e + m + s) / 3) * (1 - st / 20) * 100) / 100;
+  const E_WEIGHT = 0.3;
+  const M_WEIGHT = 0.3;
+  const S_WEIGHT = 0.2;
+  const ST_WEIGHT = 0.2;
+  return (e * E_WEIGHT) + (m * M_WEIGHT) + (s * S_WEIGHT) + (st * ST_WEIGHT);
+}
+
+export function getModeFromDCS(dcs) {
   const clamped = Math.max(0, Math.min(10, dcs));
-  let mode;
-  if (clamped <= 2.0) mode = 'SURVIVAL';
-  else if (clamped <= 4.0) mode = 'RECOVERY';
-  else if (clamped <= 6.0) mode = 'NORMAL';
-  else if (clamped <= 8.0) mode = 'DEEP_WORK';
-  else mode = 'PEAK';
-  return { dcs: clamped, mode };
+  if (clamped <= 2.0) return 'SURVIVAL';
+  if (clamped <= 4.0) return 'RECOVERY';
+  if (clamped <= 6.0) return 'NORMAL';
+  if (clamped <= 8.0) return 'DEEP_WORK';
+  return 'PEAK';
 }
 
 export function calculateTWS(priority, urgency, difficulty) {
