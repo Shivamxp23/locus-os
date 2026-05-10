@@ -26,8 +26,7 @@ import httpx
 log = logging.getLogger("locus-sync")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-NEO4J_URL = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+from services.neo4j_service import get_driver
 
 
 # ── Postgres helpers ─────────────────────────────────────────────────────────
@@ -62,13 +61,6 @@ async def record_behavioral_event(
     except Exception as e:
         log.warning(f"behavioral_event write failed: {e}")
         return False
-
-
-# ── Neo4j helpers ────────────────────────────────────────────────────────────
-
-async def _neo4j_driver():
-    from neo4j import AsyncGraphDatabase
-    return AsyncGraphDatabase.driver(NEO4J_URL, auth=("neo4j", NEO4J_PASSWORD))
 
 
 # ── Sync Operations ─────────────────────────────────────────────────────────
@@ -117,7 +109,7 @@ async def sync_vault_note(
     # ── Neo4j: graph relationships ──
     if entities or concepts or tags:
         try:
-            driver = await _neo4j_driver()
+            driver = await get_driver()
             async with driver.session() as s:
                 # Ensure Person node exists
                 await s.run("MERGE (p:Person {name: 'Shivam'})")
@@ -148,7 +140,6 @@ async def sync_vault_note(
                             name=concept,
                         )
 
-            await driver.close()
             results["neo4j"] = True
         except Exception as e:
             log.warning(f"Sync vault→neo4j failed: {e}")
@@ -178,7 +169,7 @@ async def sync_task_create(
 
     # ── Neo4j: task node ──
     try:
-        driver = await _neo4j_driver()
+        driver = await get_driver()
         async with driver.session() as s:
             await s.run("MERGE (p:Person {name: 'Shivam'})")
             await s.run(
@@ -197,7 +188,6 @@ async def sync_task_create(
                 priority=priority,
                 difficulty=difficulty,
             )
-        await driver.close()
         results["neo4j"] = True
     except Exception as e:
         log.warning(f"Sync task→neo4j failed: {e}")
@@ -290,7 +280,7 @@ async def sync_checkin(
     # ── Neo4j: behavioral state ──
     if dcs is not None:
         try:
-            driver = await _neo4j_driver()
+            driver = await get_driver()
             async with driver.session() as s:
                 await s.run(
                     """MATCH (p:Person {name: 'Shivam'})
@@ -300,7 +290,6 @@ async def sync_checkin(
                     dcs=dcs,
                     mode=mode or "UNKNOWN",
                 )
-            await driver.close()
             results["neo4j"] = True
         except Exception as e:
             log.warning(f"Sync checkin→neo4j failed: {e}")
@@ -378,11 +367,10 @@ async def sync_health() -> dict:
 
     # Neo4j
     try:
-        driver = await _neo4j_driver()
+        driver = await get_driver()
         async with driver.session() as s:
             r = await s.run("RETURN 1 AS n")
             await r.single()
-        await driver.close()
         results["neo4j"] = "ok"
     except Exception as e:
         results["neo4j"] = f"fail: {e}"

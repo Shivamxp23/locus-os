@@ -6,8 +6,7 @@ from services.qdrant_service import direct_search
 
 log = logging.getLogger("brain.retriever")
 DATABASE_URL = os.getenv("DATABASE_URL")
-NEO4J_URL = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+from services.neo4j_service import get_driver
 
 def classify_query(query: str) -> str:
     q = query.lower()
@@ -65,8 +64,7 @@ async def structured_query(intent: str, params: dict = None) -> list[dict]:
 async def graph_query(entity: str = "", relationship: str = None) -> list[dict]:
     results = []
     try:
-        from neo4j import AsyncGraphDatabase
-        driver = AsyncGraphDatabase.driver(NEO4J_URL, auth=("neo4j", NEO4J_PASSWORD))
+        driver = await get_driver()
         
         async with driver.session() as s:
             # We'll pull recent traits, patterns and projects since the query wants patterns or relationships
@@ -81,7 +79,6 @@ async def graph_query(entity: str = "", relationship: str = None) -> list[dict]:
                 text_repr = f"User has relationship {r['rel']} with {r['type']}: {val}"
                 results.append({"text": text_repr, "source": "neo4j", "score": 1.0})
                 
-        await driver.close()
     except Exception as e:
         log.error(f"Graph query failed: {e}")
     return results

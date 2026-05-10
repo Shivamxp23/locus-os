@@ -7,8 +7,7 @@ import asyncpg
 log = logging.getLogger("brain.pattern_engine")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-NEO4J_URL = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+from services.neo4j_service import get_driver
 
 async def run_weekly():
     """Triggered weekly on Sunday 11PM and on-demand."""
@@ -79,8 +78,7 @@ async def run_weekly():
         
         # Write to Neo4j
         try:
-            from neo4j import AsyncGraphDatabase
-            driver = AsyncGraphDatabase.driver(NEO4J_URL, auth=("neo4j", NEO4J_PASSWORD))
+            driver = await get_driver()
             async with driver.session() as s:
                 await s.run("""
                     MERGE (p:Person {name: 'Shivam'})
@@ -89,7 +87,6 @@ async def run_weekly():
                         p.best_focus_window = $focus,
                         p.last_pattern_update = datetime()
                 """, trend=dcs_trend, risk=exhaustion_risk, focus=best_focus)
-            await driver.close()
         except Exception as e:
             log.error(f"Failed to update Neo4j with patterns: {e}")
 

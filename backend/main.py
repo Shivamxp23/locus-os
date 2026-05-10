@@ -126,6 +126,13 @@ async def startup():
     log.info("APScheduler started with all jobs including Brain Module")
 
 
+@app.on_event("shutdown")
+async def shutdown():
+    log.info("Locus API shutting down...")
+    from services.neo4j_service import close_driver
+    await close_driver()
+
+
 @app.get("/health")
 async def health():
     sync_status = {}

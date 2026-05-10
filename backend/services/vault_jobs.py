@@ -8,6 +8,7 @@ import asyncpg
 import httpx
 from datetime import datetime, date
 from pathlib import Path
+from services.neo4j_service import get_driver
 
 log = logging.getLogger(__name__)
 
@@ -232,12 +233,8 @@ Return ONLY JSON."""
                 return
 
             # Write observations to Neo4j as Pattern nodes
-            neo4j_url = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
-            neo4j_pw = os.getenv("NEO4J_PASSWORD", "")
-
             try:
-                from neo4j import AsyncGraphDatabase
-                driver = AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", neo4j_pw))
+                driver = await get_driver()
                 async with driver.session() as s:
                     for obs in observations[:5]:
                         await s.run("""
@@ -251,7 +248,6 @@ Return ONLY JSON."""
                             MATCH (p:Person {name: 'Shivam'})
                             MERGE (p)-[:EXHIBITS_PATTERN]->(pat)
                         """, desc=obs)
-                await driver.close()
                 log.info(f"Pattern detection: wrote {len(observations)} observations to Neo4j")
             except Exception as e:
                 log.warning(f"Neo4j pattern write failed: {e}")
