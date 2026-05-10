@@ -16,8 +16,7 @@ from datetime import datetime
 router = APIRouter()
 log = logging.getLogger(__name__)
 
-NEO4J_URL      = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+from services.neo4j_service import get_driver
 DATABASE_URL   = os.getenv("DATABASE_URL", "")
 SERVICE_TOKEN  = os.getenv("LOCUS_SERVICE_TOKEN", "")
 
@@ -46,8 +45,7 @@ async def _fetch_neo4j_personality() -> dict:
         "avoidances": [],
     }
     try:
-        from neo4j import AsyncGraphDatabase
-        driver = AsyncGraphDatabase.driver(NEO4J_URL, auth=("neo4j", NEO4J_PASSWORD))
+        driver = await get_driver()
 
         async with driver.session() as s:
 
@@ -80,8 +78,6 @@ async def _fetch_neo4j_personality() -> dict:
                 "RETURN a.description AS desc ORDER BY coalesce(a.frequency, 1) DESC LIMIT 5"
             )
             result["avoidances"] = [rec["desc"] async for rec in r]
-
-        await driver.close()
 
     except Exception as e:
         log.warning(f"Neo4j read failed: {e}")
@@ -318,8 +314,7 @@ async def learn(data: dict, x_service_token: str = Header(None)):
 
     # ── Write to Neo4j ──
     try:
-        from neo4j import AsyncGraphDatabase
-        driver = AsyncGraphDatabase.driver(NEO4J_URL, auth=("neo4j", NEO4J_PASSWORD))
+        driver = await get_driver()
 
         async with driver.session() as s:
 
@@ -387,8 +382,6 @@ async def learn(data: dict, x_service_token: str = Header(None)):
                         WHEN rel.confidence < 1.0 THEN rel.confidence + 0.05
                         ELSE 1.0 END
                 """, name=extracted["trait"])
-
-        await driver.close()
 
     except Exception as e:
         log.warning(f"Neo4j write-back failed: {e}")
