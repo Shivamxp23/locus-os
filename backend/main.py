@@ -15,7 +15,7 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("locus-api")
 
-app = FastAPI(title="Locus API", version="3.1.0")
+app = FastAPI(title="Locus API", version="4.0.0")
 
 # ── CORS ──
 app.add_middleware(
@@ -123,7 +123,10 @@ async def startup():
                       id="brain_weekly_review", replace_existing=True)
 
     # ── System 2 & 3 Jobs ──
-    from core.inner_loop import run_standard_pass, run_nightly_synthesis, run_morning_briefing, decay_neo4j_weights
+    from core.inner_loop import (
+        run_standard_pass, run_nightly_synthesis, run_morning_briefing,
+        decay_neo4j_weights, reset_daily_token_counter
+    )
     from core.pattern_detector import run_all_horizons
 
     scheduler.add_job(run_all_horizons, "interval", hours=6, id="system2_patterns", replace_existing=True)
@@ -131,6 +134,7 @@ async def startup():
     scheduler.add_job(run_nightly_synthesis, "cron", hour=3, minute=0, id="system3_nightly", replace_existing=True)
     scheduler.add_job(run_morning_briefing, "cron", hour=8, minute=0, id="system3_morning", replace_existing=True)
     scheduler.add_job(decay_neo4j_weights, "cron", day_of_week="sun", hour=3, minute=30, id="system3_decay", replace_existing=True)
+    scheduler.add_job(reset_daily_token_counter, "cron", hour=0, minute=0, id="system3_token_reset", replace_existing=True)
 
     scheduler.start()
     log.info("APScheduler started with all jobs including Brain Module")
@@ -147,7 +151,7 @@ async def health():
 
     return {
         "status": "ok",
-        "version": "3.0.0",
+        "version": "4.0.0",
         "jobs": [j.id for j in scheduler.get_jobs()],
         "sync": sync_status,
     }
