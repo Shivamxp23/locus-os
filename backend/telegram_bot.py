@@ -8,11 +8,6 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import sys
 
-# Ensure backend core can be imported
-backend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
-if backend_path not in sys.path:
-    sys.path.append(backend_path)
-
 from core.query_classifier import classify_query
 from core.source_retriever import parallel_retrieve
 from core.context_synthesizer import synthesize_context

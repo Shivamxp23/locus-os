@@ -2,13 +2,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from skills.locus.brain.collector import run_nightly_crawl
-from skills.locus.brain.reader import read_vault_file, ReadRequest
-from skills.locus.brain.retriever import retrieve
-from skills.locus.brain.scheduler import generate_schedule, reschedule, RescheduleRequest
-from skills.locus.brain.pattern_engine import run_weekly as get_patterns
-from skills.locus.brain.goal_tracker import run_weekly_review
-from skills.locus.brain.pipeline import execute_query
+from services.brain.collector import run_nightly_crawl
+from services.brain.reader import read_vault_file, ReadRequest
+from services.brain.retriever import retrieve
+from services.brain.scheduler import generate_schedule, reschedule, RescheduleRequest
+from services.brain.pattern_engine import run_weekly as get_patterns
+from services.brain.goal_tracker import run_weekly_review
+from services.brain.pipeline import execute_query
 from services.goal_distiller import distill_goals, get_clarification_prompt, is_vague
 
 router = APIRouter(prefix="/brain", tags=["Brain"])

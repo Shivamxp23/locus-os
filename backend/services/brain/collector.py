@@ -20,7 +20,7 @@ async def run_nightly_crawl():
     errors = 0
     
     try:
-        from skills.locus.brain.chunker import process_file_into_chunks
+        from services.brain.chunker import process_file_into_chunks
         
         for scan_dir in VAULT_SCAN_DIRS:
             dir_path = os.path.join(VAULT_PATH, scan_dir.strip())
