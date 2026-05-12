@@ -37,9 +37,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message
 log = logging.getLogger("personality-graph")
 
 # ── Config ──
-NEO4J_URL = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
+# When running on the VM host (outside Docker), replace Docker-internal
+# service names with 127.0.0.1 so connections actually resolve.
+def _fix_docker_url(url: str) -> str:
+    """Replace Docker service hostnames with localhost for host execution."""
+    for svc in ["neo4j", "postgres", "redis", "qdrant"]:
+        url = url.replace(f"://{svc}:", "://127.0.0.1:")
+        url = url.replace(f"@{svc}:", "@127.0.0.1:")
+    return url
+
+NEO4J_URL = _fix_docker_url(os.getenv("NEO4J_URL", "bolt://127.0.0.1:7687"))
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "Neo4j3301Locus")
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = _fix_docker_url(os.getenv("DATABASE_URL", ""))
 VAULT_PATH = os.getenv("VAULT_PATH", "/vault")
 
 # Wikilink regex: [[Target]] or [[Target|Display]]
