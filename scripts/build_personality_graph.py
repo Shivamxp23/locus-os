@@ -40,7 +40,9 @@ log = logging.getLogger("personality-graph")
 # When running on the VM host (outside Docker), replace Docker-internal
 # service names with 127.0.0.1 so connections actually resolve.
 def _fix_docker_url(url: str) -> str:
-    """Replace Docker service hostnames with localhost for host execution."""
+    """Replace Docker service hostnames with localhost when running on host."""
+    if os.path.exists("/.dockerenv"):
+        return url  # Inside Docker — hostnames resolve fine
     for svc in ["neo4j", "postgres", "redis", "qdrant"]:
         url = url.replace(f"://{svc}:", "://127.0.0.1:")
         url = url.replace(f"@{svc}:", "@127.0.0.1:")
