@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from routers import logs, tasks, captures, vault, wiki, auth, checkins, context
+from routers import logs, tasks, captures, vault, auth, checkins, context
 from routers import goals, schedule, factions, analytics_data
 from services.vault_jobs import (
     nightly_diff, weekly_synthesis,
@@ -62,7 +62,6 @@ app.include_router(logs.router,     prefix="/api/v1")
 app.include_router(tasks.router,    prefix="/api/v1")
 app.include_router(captures.router, prefix="/api/v1")
 app.include_router(vault.router,    prefix="/api/v1")
-app.include_router(wiki.router,     prefix="/api/v1")
 app.include_router(auth.router,     prefix="/api/v1")
 app.include_router(checkins.router, prefix="/api/v1")
 app.include_router(context.router,  prefix="/api/v1")
@@ -84,7 +83,7 @@ scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
 @app.on_event("startup")
 async def startup():
-    log.info("Locus API v3.0 starting up — Brain Module Overhaul...")
+    log.info("Locus API v4.0 starting up — Cognitive OS...")
 
     # ── Nightly Jobs ──
     scheduler.add_job(nightly_diff, "cron", hour=23, minute=30,

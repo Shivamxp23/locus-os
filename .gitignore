@@ -231,7 +231,7 @@ coverage/
 .nyc_output/
 
 # archived planning docs
-.Keys and Documents/
+.keysndocs/
 *.key
 *.pem
 *.pub
