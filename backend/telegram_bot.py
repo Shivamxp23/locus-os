@@ -34,6 +34,7 @@ from core.source_retriever import parallel_retrieve
 from core.context_synthesizer import synthesize_context
 from core.hebbian import apply_feedback_signal, increment_traversed_weights
 from core.shorthand import SHORTHAND_SCHEMA_PROMPT
+from services.vault_chat_logger import log_chat_exchange
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("locus-bot")
@@ -372,6 +373,11 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text(reply, reply_markup=reply_markup)
 
+        # ── Log chat to vault as .md ──
+        asyncio.create_task(_background_chat_log(
+            text, reply, model, primary
+        ))
+
         # ── Background: trigger state inference on every message ──
         asyncio.create_task(_background_state_update(text))
 
@@ -394,6 +400,21 @@ async def _background_state_update(user_message: str):
         })
     except Exception as e:
         log.warning(f"Background state update failed: {e}")
+
+
+async def _background_chat_log(
+    user_message: str, bot_reply: str, model: str, intent: str
+):
+    """Log the chat exchange to vault as a daily .md file."""
+    try:
+        log_chat_exchange(
+            user_message=user_message,
+            bot_reply=bot_reply,
+            model_used=model,
+            intent=intent,
+        )
+    except Exception as e:
+        log.warning(f"Chat log to vault failed: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════
