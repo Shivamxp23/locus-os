@@ -237,3 +237,5 @@ coverage/
 *.pub
 LOCUS_README_v2.mdlightrag-data/
 lightrag.env
+graphify-out/
+.agents
