@@ -1,0 +1,15 @@
+{
+  "accounts": [
+    "soni82003@gmail.com",
+    "soni820034@gmail.com",
+    "shivamsonifilms@gmail.com",
+    "xodplisbo@gmail.com",
+    "ekajuemail@gmail.com"
+  ],
+  "platforms": ["claude", "chatgpt", "gemini", "aistudio", "perplexity", "flow"],
+  "exclude": [],
+  "vault_dir": "/vault/chats",
+  "profiles_dir": "/vault/.browser_profiles",
+  "manifest_path": "/vault/.chat_manifest.json",
+  "log_file": "/var/log/locus_chats.log"
+}

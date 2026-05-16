@@ -1,0 +1,14 @@
+I genuinely think that the codebase is now filled with bullshit code that overlaps but doesnt work. 
+
+Remove or put them to use, cuz now they're simply taking up space.
+
+Also now that we have something that even kinda works, we need to get our head together, and write down ALL the features that we want and know 
+in depth exactly what functionalities we want. 
+
+Find the laziest way to make it real, what other tools can we use to make it real? No need to reinvent the wheel. Use somebody else's tools.
+Do thorough research because we need to save time and use other people's  things now. 
+
+I want you to explore the toolSpace for us now.
+
+Use Graphify and also create report files for significant substantial changes but this is for ME to audit, ask the AI to check the graphify 
+to see what the state of the codebase is right now.
