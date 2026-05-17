@@ -8,7 +8,17 @@ in depth exactly what functionalities we want.
 Find the laziest way to make it real, what other tools can we use to make it real? No need to reinvent the wheel. Use somebody else's tools.
 Do thorough research because we need to save time and use other people's  things now. 
 
-I want you to explore the toolSpace for us now.
+NOTHING WRONG WITH CLONING ANOTHER REPO LIKE OPENHUMAN AND MODIFYING IT
+TO OUR LIKING ALSO BY THE WAY OR EVEN USING THE CODE THEY USED TO MAKE SOMETHING WORK FOR US!
+
+STUDY OTHER REPOS LIKE FOR LLM  WIKI OR OPENHUMAN OR HERMES OR OPENCLAW
+TO BORROW CODE OR LOGICS! For example, Hermes has an Excalidraw skill, just
+borrow it at this point, openhuman is able to refer to the LLM Wiki and infer from it very easily, the neo4j repo has something else, download Pi agent or SOMETHING onto the VM so that it can enhance it's own code on it's own after we define a specific goal.
+Try using an 8B parameter model in the VM and figure out how to create sub-agents with it (other agents like hermes or claude code etc give capabilities of creating sub-agents, if that shit has to be coded then directly borrow it!) Then we'll try to finetune it as well.
+
+We'll need a reader that can read outputs, and ingest it into the pi agent as well, for autonomous execution. The goal is to give it full free will and agency. If I ever say help me achieve this by any means necessary, it should be able to do so, through any means necessary and that includes coding something, literally ordering something to surveil me and also not letting any data leak (use tor and shit) if you must!
+
+WE NEED TO HAVE A LONG CHAT WITH CLAUDE AND BRAINSTORM AND UNDERSTAND WHAT IS THE BASE LINE FEATURES WE WANT AND THEN WHAT IS PHASE 2 FOR FEATURES. For now I'd really like a schedule orchestrator like we had planned. The bare minimum is the system! And check how can I set-up infratructure such that when I add new things, they easily integrate with the current framework, that means I collect all relevant data from the get go keeping in account of features that arent even created or conceptualized yet. How do we do that? Because that allows room for the most amount of flexibility and ease of development. So we need to decide which data to collect and how to store it.
 
 Use Graphify and also create report files for significant substantial changes but this is for ME to audit, ask the AI to check the graphify 
 to see what the state of the codebase is right now.
