@@ -20,5 +20,8 @@ We'll need a reader that can read outputs, and ingest it into the pi agent as we
 
 WE NEED TO HAVE A LONG CHAT WITH CLAUDE AND BRAINSTORM AND UNDERSTAND WHAT IS THE BASE LINE FEATURES WE WANT AND THEN WHAT IS PHASE 2 FOR FEATURES. For now I'd really like a schedule orchestrator like we had planned. The bare minimum is the system! And check how can I set-up infratructure such that when I add new things, they easily integrate with the current framework, that means I collect all relevant data from the get go keeping in account of features that arent even created or conceptualized yet. How do we do that? Because that allows room for the most amount of flexibility and ease of development. So we need to decide which data to collect and how to store it.
 
+Maybe I need to feed claude with multiple transcripts of multiple different Obsidian applications so that it can make me a proper Obsidian skill file, or maybe we can borrow that too, also give it proper skill to make a great Obsidian dashboard.
+
+We need to finetune Locus's LLM so that it just knows how to use these things, or maybe an obsidian MCP BUT SOMETHING THAT EITHER REDUCES TOKEN or makes it literally zero.
 Use Graphify and also create report files for significant substantial changes but this is for ME to audit, ask the AI to check the graphify 
 to see what the state of the codebase is right now.
