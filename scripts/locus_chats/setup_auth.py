@@ -29,23 +29,23 @@ PLATFORMS = {
     },
     "chatgpt": {
         "login_url": "https://chatgpt.com",
-        "success_pattern": "chatgpt.com/**",
+        "success_pattern": "*chatgpt.com/**",
     },
     "gemini": {
         "login_url": "https://gemini.google.com",
-        "success_pattern": "gemini.google.com/app**",
+        "success_pattern": "*gemini.google.com/app**",
     },
     "aistudio": {
         "login_url": "https://aistudio.google.com",
-        "success_pattern": "aistudio.google.com/prompts**",
+        "success_pattern": "*aistudio.google.com/prompts**",
     },
     "perplexity": {
         "login_url": "https://perplexity.ai",
-        "success_pattern": "perplexity.ai/**",
+        "success_pattern": "*perplexity.ai/**",
     },
     "flow": {
         "login_url": "https://flow.microsoft.com",
-        "success_pattern": "flow.microsoft.com/**",
+        "success_pattern": "*flow.microsoft.com/**",
     },
 }
 

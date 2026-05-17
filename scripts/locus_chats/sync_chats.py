@@ -13,13 +13,11 @@ Environment variables (optional but recommended):
 
 import argparse
 import asyncio
-import hashlib
 import json
 import logging
 import os
 import re
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -1077,15 +1075,15 @@ class SyncRunner:
                     active_combos += 1
                     logging.info(f"[{combo}] {n} chat(s) updated.")
 
-                # Persist manifest after each account/platform combo
-                save_manifest(self.manifest_path, self.manifest)
-
         # Alert for zero-conversation combos where profile existed & token worked
         for combo in zero_alert_candidates:
             send_telegram(
                 f"⚠️ {combo} — profile & token OK but 0 conversations exported. "
                 "Possible API endpoint change or account has no history."
             )
+
+        # Atomically persist manifest after ALL combos complete (spec requirement)
+        save_manifest(self.manifest_path, self.manifest)
 
         send_telegram(
             f"✅ Locus Chat Sync complete — {total_updated} chats updated across {active_combos} platform/account combinations."
